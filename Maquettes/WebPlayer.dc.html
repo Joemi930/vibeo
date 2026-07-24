@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  .ms { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; line-height: 1; -webkit-font-feature-settings: 'liga'; }
+</style>
+</helmet>
+
+<div style="width:1440px;height:900px;background:var(--bg,#121016);color:var(--tx,#F4F1F8);font-family:'Plus Jakarta Sans',sans-serif;display:flex;flex-direction:column;overflow:hidden;">
+
+  <!-- top bar -->
+  <div style="height:64px;flex:none;display:flex;align-items:center;gap:20px;padding:0 28px;border-bottom:1px solid var(--out,#322C3D);">
+    <div style="display:flex;align-items:center;gap:10px;"><svg width="26" height="26" viewBox="0 0 100 100"><g fill="var(--pri2,#8B5CF6)"><rect x="8" y="18" width="12" height="66" rx="6"/><rect x="27" y="40" width="12" height="44" rx="6"/><rect x="46" y="58" width="12" height="26" rx="6" fill="var(--acc,#B69DF8)"/><rect x="65" y="40" width="12" height="44" rx="6"/><rect x="84" y="18" width="12" height="66" rx="6"/></g></svg><span style="font-weight:800;font-size:20px;letter-spacing:-0.02em;">Vibeo</span></div>
+    <div style="flex:1;max-width:520px;margin-left:20px;background:var(--s2,#241F2B);border:1px solid var(--out,#322C3D);border-radius:999px;padding:10px 18px;display:flex;align-items:center;gap:12px;"><span class="ms" style="font-size:20px;color:var(--tx3,#7C7589);">search</span><span style="color:var(--tx3,#7C7589);font-size:14px;">Rechercher…</span></div>
+    <div style="flex:1;"></div>
+    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;">M</div>
+  </div>
+
+  <!-- body -->
+  <div style="flex:1;display:flex;overflow:hidden;">
+
+    <!-- left: video + meta -->
+    <div style="flex:1;overflow:hidden;padding:24px 24px 0 32px;">
+      <!-- video -->
+      <div style="position:relative;width:100%;aspect-ratio:16/9;border-radius:16px;overflow:hidden;background:var(--stripe,#241F2B);">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,#0000 65%,#000000aa);"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:66px;height:66px;border-radius:50%;background:#00000066;display:flex;align-items:center;justify-content:center;"><span class="ms" style="font-size:38px;color:#fff;font-variation-settings:'FILL' 1;">pause</span></div>
+        <div style="position:absolute;left:16px;right:16px;bottom:12px;color:#fff;"><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:6px;"><span>1:47</span><span style="display:flex;gap:16px;"><span class="ms" style="font-size:20px;">settings</span><span class="ms" style="font-size:20px;">fullscreen</span></span></div><div style="height:4px;background:#ffffff40;border-radius:4px;overflow:hidden;"><div style="width:42%;height:100%;background:linear-gradient(90deg,#7C3AED,#4F46E5);"></div></div></div>
+      </div>
+
+      <!-- title -->
+      <div style="font-size:22px;font-weight:700;line-height:1.3;margin-top:18px;">Retiens la nuit — Clip officiel</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);flex:none;"></div>
+          <div><div style="display:flex;align-items:center;gap:5px;"><span style="font-size:15px;font-weight:700;">Selma Vox</span><span class="ms" style="font-size:16px;color:var(--pri2,#8B5CF6);font-variation-settings:'FILL' 1;">verified</span></div><div style="font-size:12.5px;color:var(--tx3,#7C7589);">128 k abonnés</div></div>
+          <button style="margin-left:10px;border:0;border-radius:999px;padding:10px 20px;font:600 13px 'Plus Jakarta Sans';color:#fff;background:linear-gradient(135deg,#7C3AED,#4F46E5);">S'abonner</button>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div style="display:flex;align-items:center;gap:7px;background:var(--s2,#241F2B);border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600;"><span class="ms" style="font-size:19px;color:var(--acc,#B69DF8);font-variation-settings:'FILL' 1;">favorite</span>18,2 k</div>
+          <div style="display:flex;align-items:center;gap:7px;background:var(--s2,#241F2B);border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600;"><span class="ms" style="font-size:19px;">share</span>Partager</div>
+          <div style="display:flex;align-items:center;gap:7px;background:var(--s2,#241F2B);border-radius:999px;padding:9px 16px;font-size:13px;font-weight:600;"><span class="ms" style="font-size:19px;">headphones</span>Audio</div>
+          <div style="display:flex;align-items:center;justify-content:center;background:var(--s2,#241F2B);border-radius:999px;width:40px;height:40px;"><span class="ms" style="font-size:19px;color:var(--tx3,#7C7589);">flag</span></div>
+        </div>
+      </div>
+      <div style="background:var(--s1,#1B1820);border:1px solid var(--out,#322C3D);border-radius:12px;padding:14px 16px;margin-top:16px;font-size:13.5px;line-height:1.55;color:var(--tx2,#B9B2C7);"><strong style="color:var(--tx,#F4F1F8);">2 419 588 vues · il y a 3 jours</strong><br>Tourné entre Dakar et Paris, « Retiens la nuit » clôt la trilogie nocturne de Selma Vox. Réalisation : Théo Rivière.</div>
+    </div>
+
+    <!-- right: queue + comments -->
+    <div style="width:400px;flex:none;border-left:1px solid var(--out,#322C3D);overflow:hidden;padding:22px 20px 0;display:flex;flex-direction:column;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:14px;">À suivre</div>
+      <div style="display:flex;gap:12px;margin-bottom:14px;"><div style="position:relative;width:120px;flex:none;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:var(--stripe,#241F2B);"><span style="position:absolute;right:4px;bottom:4px;background:#000000cc;color:#fff;font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;">2:58</span></div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;line-height:1.3;">Loin d'ici</div><div style="font-size:11.5px;color:var(--tx3,#7C7589);margin-top:4px;">Djino · 312 k vues</div></div></div>
+      <div style="display:flex;gap:12px;margin-bottom:14px;"><div style="position:relative;width:120px;flex:none;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:var(--stripe,#241F2B);"><span style="position:absolute;right:4px;bottom:4px;background:#000000cc;color:#fff;font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;">3:20</span></div><div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;line-height:1.3;">Gospel Sunrise</div><div style="font-size:11.5px;color:var(--tx3,#7C7589);margin-top:4px;">Ayo Mensah · 156 k vues</div></div></div>
+      <div style="height:1px;background:var(--out,#322C3D);margin:6px 0 16px;"></div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:14px;">Commentaires · 432</div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;"><div style="width:32px;height:32px;border-radius:50%;background:var(--s3,#2E2836);flex:none;"></div><div><div style="font-size:12.5px;"><span style="font-weight:600;">@lea.mrn</span> <span style="color:var(--tx3,#7C7589);">· 2 j</span></div><div style="font-size:13px;color:var(--tx2,#B9B2C7);margin-top:2px;line-height:1.4;">Ce pont à 2:10 me hante depuis 3 jours 🔥</div></div></div>
+      <div style="display:flex;gap:10px;"><div style="width:32px;height:32px;border-radius:50%;background:var(--s3,#2E2836);flex:none;"></div><div><div style="font-size:12.5px;"><span style="font-weight:600;">@kev_off</span> <span style="color:var(--tx3,#7C7589);">· 5 j</span></div><div style="font-size:13px;color:var(--tx2,#B9B2C7);margin-top:2px;line-height:1.4;">La réal est dingue, bravo Théo Rivière</div></div></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}"></script>
+</body>
+</html>

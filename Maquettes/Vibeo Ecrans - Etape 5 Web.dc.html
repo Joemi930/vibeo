@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<meta name="design_doc_mode" content="canvas">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background: #0E0C12; }
+  .ms { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; line-height: 1; -webkit-font-feature-settings: 'liga'; }
+  .lbl { font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; color: #7C7589; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .addr { flex:1; max-width:420px; background:#1B1820; border-radius:999px; padding:6px 14px; font-family:'Space Mono',monospace; font-size:11px; color:#8A8397; display:flex; align-items:center; gap:8px; }
+</style>
+</helmet>
+
+<section style="min-height:100vh;padding:56px 56px 90px;background:#0E0C12;color:#F4F1F8;">
+
+  <header style="margin-bottom:44px;">
+    <div style="font-family:'Space Mono',monospace;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#8B5CF6;margin-bottom:10px;">Web desktop · Étape 5 · 1440 px</div>
+    <h1 style="margin:0 0 12px;font-size:38px;line-height:1.05;font-weight:800;letter-spacing:-0.02em;">Variantes web</h1>
+    <p style="margin:0;max-width:700px;font-size:15px;line-height:1.6;color:#B9B2C7;">Accueil, lecteur et dashboard admin en 1440 px. Chaque écran en <strong style="color:#F4F1F8;">sombre</strong> puis <strong style="color:#F4F1F8;">clair</strong>. Zoome / déplace la planche librement.</p>
+  </header>
+
+  <div style="display:flex;flex-direction:column;gap:64px;">
+
+    <!-- 5.1 -->
+    <div>
+      <div class="lbl" style="margin-bottom:18px;">5.1 · Accueil web — nav latérale, grille 4 colonnes, mini-player pleine largeur</div>
+      <div style="display:flex;gap:48px;flex-wrap:wrap;">
+        <div style="--bg:#121016;--s1:#1B1820;--s2:#241F2B;--s3:#2E2836;--pri:#7C3AED;--pri2:#8B5CF6;--pc:#35216B;--onpc:#E9DDFF;--acc:#B69DF8;--tx:#F4F1F8;--tx2:#B9B2C7;--tx3:#7C7589;--out:#322C3D;--ok:#4ADE80;--warn:#FBBF24;--err:#FF6B6B;--stripe:repeating-linear-gradient(135deg,#241F2B,#241F2B 10px,#2A2433 10px,#2A2433 20px);flex:none;border-radius:16px;overflow:hidden;box-shadow:0 40px 80px #0008;border:1px solid #2A2533;">
+          <div style="height:40px;background:#0A090D;display:flex;align-items:center;gap:8px;padding:0 16px;"><span class="dot" style="background:#FF5F57;"></span><span class="dot" style="background:#FEBC2E;"></span><span class="dot" style="background:#28C840;"></span><div class="addr" style="margin-left:12px;"><span class="ms" style="font-size:13px;">lock</span>vibeo.app</div></div>
+          <div style="width:1440px;height:900px;overflow:hidden;"><dc-import name="WebHome" hint-size="1440px,900px"></dc-import></div>
+        </div>
+        <div style="--bg:#FAF9FC;--s1:#FFFFFF;--s2:#F2EFF9;--s3:#E9E4F3;--pri:#6C3BD9;--pri2:#6C3BD9;--pc:#EADDFF;--onpc:#22005D;--acc:#6C3BD9;--tx:#1A1622;--tx2:#4A4458;--tx3:#7C7589;--out:#E1DBEC;--ok:#15803D;--warn:#B45309;--err:#DC2626;--stripe:repeating-linear-gradient(135deg,#EDE9F5,#EDE9F5 10px,#E4DEF0 10px,#E4DEF0 20px);flex:none;border-radius:16px;overflow:hidden;box-shadow:0 40px 80px #0008;border:1px solid #2A2533;">
+          <div style="height:40px;background:#0A090D;display:flex;align-items:center;gap:8px;padding:0 16px;"><span class="dot" style="background:#FF5F57;"></span><span class="dot" style="background:#FEBC2E;"></span><span class="dot" style="background:#28C840;"></span><div class="addr" style="margin-left:12px;"><span class="ms" style="font-size:13px;">lock</span>vibeo.app</div></div>
+          <div style="width:1440px;height:900px;overflow:hidden;"><dc-import name="WebHome" hint-size="1440px,900px"></dc-import></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.2 -->
+    <div>
+      <div class="lbl" style="margin-bottom:18px;">5.2 · Lecteur web — vidéo large (~2/3), colonne « À suivre » + commentaires</div>
+      <div style="display:flex;gap:48px;flex-wrap:wrap;">
+        <div style="--bg:#121016;--s1:#1B1820;--s2:#241F2B;--s3:#2E2836;--pri:#7C3AED;--pri2:#8B5CF6;--pc:#35216B;--onpc:#E9DDFF;--acc:#B69DF8;--tx:#F4F1F8;--tx2:#B9B2C7;--tx3:#7C7589;--out:#322C3D;--ok:#4ADE80;--warn:#FBBF24;--err:#FF6B6B;--stripe:repeating-linear-gradient(135deg,#241F2B,#241F2B 10px,#2A2433 10px,#2A2433 20px);flex:none;border-radius:16px;overflow:hidden;box-shadow:0 40px 80px #0008;border:1px solid #2A2533;">
+          <div style="height:40px;background:#0A090D;display:flex;align-items:center;gap:8px;padding:0 16px;"><span class="dot" style="background:#FF5F57;"></span><span class="dot" style="background:#FEBC2E;"></span><span class="dot" style="background:#28C840;"></span><div class="addr" style="margin-left:12px;"><span class="ms" style="font-size:13px;">lock</span>vibeo.app/clip/retiens-la-nuit</div></div>
+          <div style="width:1440px;height:900px;overflow:hidden;"><dc-import name="WebPlayer" hint-size="1440px,900px"></dc-import></div>
+        </div>
+        <div style="--bg:#FAF9FC;--s1:#FFFFFF;--s2:#F2EFF9;--s3:#E9E4F3;--pri:#6C3BD9;--pri2:#6C3BD9;--pc:#EADDFF;--onpc:#22005D;--acc:#6C3BD9;--tx:#1A1622;--tx2:#4A4458;--tx3:#7C7589;--out:#E1DBEC;--ok:#15803D;--warn:#B45309;--err:#DC2626;--stripe:repeating-linear-gradient(135deg,#EDE9F5,#EDE9F5 10px,#E4DEF0 10px,#E4DEF0 20px);flex:none;border-radius:16px;overflow:hidden;box-shadow:0 40px 80px #0008;border:1px solid #2A2533;">
+          <div style="height:40px;background:#0A090D;display:flex;align-items:center;gap:8px;padding:0 16px;"><span class="dot" style="background:#FF5F57;"></span><span class="dot" style="background:#FEBC2E;"></span><span class="dot" style="background:#28C840;"></span><div class="addr" style="margin-left:12px;"><span class="ms" style="font-size:13px;">lock</span>vibeo.app/clip/retiens-la-nuit</div></div>
+          <div style="width:1440px;height:900px;overflow:hidden;"><dc-import name="WebPlayer" hint-size="1440px,900px"></dc-import></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5.3 -->
+    <div>
+      <div class="lbl" style="margin-bottom:18px;">5.3 · Dashboard admin — candidatures, score IA, examen document sécurisé</div>
+      <div style="display:flex;gap:48px;flex-wrap:wrap;">
+        <div style="--bg:#121016;--s1:#1B1820;--s2:#241F2B;--s3:#2E2836;--pri:#7C3AED;--pri2:#8B5CF6;--pc:#35216B;--onpc:#E9DDFF;--acc:#B69DF8;--tx:#F4F1F8;--tx2:#B9B2C7;--tx3:#7C7589;--out:#322C3D;--ok:#4ADE80;--okb:#12301F;--warn:#FBBF24;--warnb:#33270A;--err:#FF6B6B;--errb:#3A1D22;--info:#60A5FA;--stripe:repeating-linear-gradient(135deg,#241F2B,#241F2B 10px,#2A2433 10px,#2A2433 20px);flex:none;border-radius:16px;overflow:hidden;box-shadow:0 40px 80px #0008;border:1px solid #2A2533;">
+          <div style="height:40px;background:#0A090D;display:flex;align-items:center;gap:8px;padding:0 16px;"><span class="dot" style="background:#FF5F57;"></span><span class="dot" style="background:#FEBC2E;"></span><span class="dot" style="background:#28C840;"></span><div class="addr" style="margin-left:12px;"><span class="ms" style="font-size:13px;">lock</span>admin.vibeo.app/candidatures</div></div>
+          <div style="width:1440px;height:900px;overflow:hidden;"><dc-import name="AdminDashboard" hint-size="1440px,900px"></dc-import></div>
+        </div>
+        <div style="--bg:#FAF9FC;--s1:#FFFFFF;--s2:#F2EFF9;--s3:#E9E4F3;--pri:#6C3BD9;--pri2:#6C3BD9;--pc:#EADDFF;--onpc:#22005D;--acc:#6C3BD9;--tx:#1A1622;--tx2:#4A4458;--tx3:#7C7589;--out:#E1DBEC;--ok:#15803D;--okb:#DCFCE7;--warn:#B45309;--warnb:#FEF3C7;--err:#DC2626;--errb:#FEE2E2;--info:#2563EB;--stripe:repeating-linear-gradient(135deg,#EDE9F5,#EDE9F5 10px,#E4DEF0 10px,#E4DEF0 20px);flex:none;border-radius:16px;overflow:hidden;box-shadow:0 40px 80px #0008;border:1px solid #2A2533;">
+          <div style="height:40px;background:#0A090D;display:flex;align-items:center;gap:8px;padding:0 16px;"><span class="dot" style="background:#FF5F57;"></span><span class="dot" style="background:#FEBC2E;"></span><span class="dot" style="background:#28C840;"></span><div class="addr" style="margin-left:12px;"><span class="ms" style="font-size:13px;">lock</span>admin.vibeo.app/candidatures</div></div>
+          <div style="width:1440px;height:900px;overflow:hidden;"><dc-import name="AdminDashboard" hint-size="1440px,900px"></dc-import></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:60px;padding:18px 22px;background:#16131C;border:1px solid #241F2B;border-radius:14px;display:flex;align-items:center;gap:14px;max-width:900px;">
+    <span style="font-family:'Space Mono',monospace;font-weight:700;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#8B5CF6;">Checkpoint final</span>
+    <span style="font-size:14px;color:#B9B2C7;">Ensemble livré : logo, design system, écrans mobiles (étapes 3 &amp; 4) et web (étape 5), tous en deux modes.</span>
+  </div>
+
+</section>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  .ms { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; line-height: 1; -webkit-font-feature-settings: 'liga'; }
+</style>
+</helmet>
+
+<div style="width:390px;height:844px;background:var(--bg,#121016);color:var(--tx,#F4F1F8);font-family:'Plus Jakarta Sans',sans-serif;display:flex;flex-direction:column;overflow:hidden;">
+
+  <!-- app bar -->
+  <div style="height:56px;flex:none;display:flex;align-items:center;gap:14px;padding:16px 16px 0;">
+    <span class="ms" style="font-size:26px;">arrow_back</span>
+    <span style="font-size:18px;font-weight:700;">Devenir artiste</span>
+  </div>
+
+  <div style="flex:1;overflow:hidden;padding:14px 16px 0;">
+    <p style="margin:0 0 18px;font-size:13px;line-height:1.5;color:var(--tx2,#B9B2C7);">Deviens artiste vérifié pour publier tes clips. Notre équipe examine chaque demande sous 48 h.</p>
+
+    <!-- nom de scène -->
+    <div style="position:relative;border:1px solid var(--out,#4A3E6E);border-radius:12px;padding:19px 14px 8px;margin-bottom:16px;"><span style="position:absolute;top:-8px;left:12px;background:var(--bg,#121016);padding:0 6px;font-size:12px;color:var(--acc,#B69DF8);">Nom de scène</span><span style="font-size:15px;">Naïka</span></div>
+
+    <!-- liens -->
+    <div style="position:relative;border:1px solid var(--out,#4A3E6E);border-radius:12px;padding:19px 14px 8px;margin-bottom:16px;"><span style="position:absolute;top:-8px;left:12px;background:var(--bg,#121016);padding:0 6px;font-size:12px;color:var(--acc,#B69DF8);">Liens (Instagram, Spotify…)</span><span style="font-size:15px;color:var(--tx2,#B9B2C7);">instagram.com/naika.mzk</span></div>
+
+    <!-- présentation -->
+    <div style="position:relative;border:1px solid var(--out,#4A3E6E);border-radius:12px;padding:19px 14px 12px;margin-bottom:20px;height:88px;"><span style="position:absolute;top:-8px;left:12px;background:var(--bg,#121016);padding:0 6px;font-size:12px;color:var(--acc,#B69DF8);">Présentation</span><span style="font-size:14px;color:var(--tx2,#B9B2C7);line-height:1.5;">Artiste afro-pop, 3 EP indépendants, 400 k écoutes mensuelles…</span></div>
+
+    <!-- upload ID -->
+    <div style="font-size:14px;font-weight:700;margin-bottom:10px;">Pièce d'identité</div>
+    <div style="position:relative;border-radius:12px;overflow:hidden;height:120px;background:var(--stripe,#241F2B);margin-bottom:10px;">
+      <div style="position:absolute;inset:0;backdrop-filter:blur(7px);background:#0000004d;"></div>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#fff;"><span class="ms" style="font-size:26px;">badge</span><span style="font-size:12px;font-weight:600;">carte_identite_naika.jpg</span><span style="font-size:11px;color:#D8D2E4;">Aperçu flouté pour ta sécurité</span></div>
+    </div>
+    <!-- security notice -->
+    <div style="display:flex;gap:10px;align-items:flex-start;background:var(--pc,#35216B);border:1px solid var(--pri2,#8B5CF6);border-radius:12px;padding:12px 13px;margin-bottom:20px;">
+      <span class="ms" style="font-size:20px;color:var(--onpc,#E9DDFF);flex:none;font-variation-settings:'FILL' 1;">lock</span>
+      <span style="font-size:12px;line-height:1.5;color:var(--onpc,#E9DDFF);font-weight:600;">Document chiffré, visible uniquement par notre équipe de vérification, et supprimé automatiquement après la décision.</span>
+    </div>
+
+    <!-- consent -->
+    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:4px;">
+      <div style="width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;flex:none;"><span class="ms" style="font-size:16px;color:#fff;font-variation-settings:'FILL' 1;">check</span></div>
+      <span style="font-size:12.5px;line-height:1.5;color:var(--tx2,#B9B2C7);">Je certifie être l'artiste ou son représentant et j'accepte les conditions de vérification.</span>
+    </div>
+  </div>
+
+  <!-- submit -->
+  <div style="flex:none;padding:12px 16px 22px;border-top:1px solid var(--out,#322C3D);">
+    <button style="width:100%;border:0;border-radius:999px;padding:15px;font:700 15px 'Plus Jakarta Sans';color:#fff;background:linear-gradient(135deg,#7C3AED,#4F46E5);">Envoyer ma candidature</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}"></script>
+</body>
+</html>

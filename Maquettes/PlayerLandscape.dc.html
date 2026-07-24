@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  .ms { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; line-height: 1; -webkit-font-feature-settings: 'liga'; }
+</style>
+</helmet>
+
+<div style="width:844px;height:390px;position:relative;background:var(--stripe,#241F2B);font-family:'Plus Jakarta Sans',sans-serif;overflow:hidden;">
+  <div style="position:absolute;inset:0;background:linear-gradient(180deg,#00000088,#0000 25%,#0000 55%,#000000bb);"></div>
+
+  <!-- top bar -->
+  <div style="position:absolute;top:16px;left:18px;right:18px;display:flex;align-items:center;justify-content:space-between;color:#fff;">
+    <div style="display:flex;align-items:center;gap:14px;"><span class="ms" style="font-size:26px;">arrow_back</span><div><div style="font-size:15px;font-weight:700;">Retiens la nuit — Clip officiel</div><div style="font-size:12px;color:#D8D2E4;">Selma Vox</div></div></div>
+    <div style="display:flex;gap:20px;"><span class="ms" style="font-size:23px;">cast</span><span class="ms" style="font-size:23px;">closed_caption</span><span class="ms" style="font-size:23px;">settings</span></div>
+  </div>
+
+  <!-- center controls -->
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:48px;color:#fff;">
+    <span class="ms" style="font-size:40px;">replay_10</span>
+    <div style="width:70px;height:70px;border-radius:50%;background:#00000066;display:flex;align-items:center;justify-content:center;"><span class="ms" style="font-size:42px;font-variation-settings:'FILL' 1;">pause</span></div>
+    <span class="ms" style="font-size:40px;">forward_10</span>
+  </div>
+
+  <!-- bottom timeline -->
+  <div style="position:absolute;left:18px;right:18px;bottom:16px;color:#fff;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <span style="font-size:12px;font-weight:600;">1:47</span>
+      <div style="flex:1;height:4px;background:#ffffff40;border-radius:4px;overflow:hidden;position:relative;"><div style="width:42%;height:100%;background:linear-gradient(90deg,#7C3AED,#4F46E5);"></div><div style="position:absolute;left:42%;top:50%;transform:translate(-50%,-50%);width:13px;height:13px;border-radius:50%;background:#fff;"></div></div>
+      <span style="font-size:12px;font-weight:600;color:#C9C2D6;">4:15</span>
+      <span class="ms" style="font-size:24px;">fullscreen_exit</span>
+    </div>
+  </div>
+
+  <!-- side actions -->
+  <div style="position:absolute;right:18px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:22px;align-items:center;color:#fff;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><span class="ms" style="font-size:26px;color:#B69DF8;font-variation-settings:'FILL' 1;">favorite</span><span style="font-size:11px;font-weight:600;">18,2 k</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><span class="ms" style="font-size:26px;">chat_bubble</span><span style="font-size:11px;font-weight:600;">432</span></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:3px;"><span class="ms" style="font-size:26px;">share</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:844,&quot;height&quot;:390}}"></script>
+</body>
+</html>

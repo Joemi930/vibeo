@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  .ms { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; line-height: 1; -webkit-font-feature-settings: 'liga'; }
+</style>
+</helmet>
+
+<div style="width:390px;height:844px;background:var(--bg,#121016);color:var(--tx,#F4F1F8);font-family:'Plus Jakarta Sans',sans-serif;display:flex;flex-direction:column;overflow:hidden;">
+  <div style="height:44px;flex:none;"></div>
+  <div style="padding:8px 16px 0;flex:none;display:flex;align-items:center;gap:14px;"><span class="ms" style="font-size:26px;">arrow_back</span><span style="font-size:18px;font-weight:700;">Nouveau clip</span></div>
+  <div style="display:flex;align-items:center;gap:6px;padding:18px 16px 0;flex:none;">
+    <div style="flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,#7C3AED,#4F46E5);"></div>
+    <div style="flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,#7C3AED,#4F46E5);"></div>
+    <div style="flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,#7C3AED,#4F46E5);"></div>
+    <div style="flex:1;height:4px;border-radius:4px;background:var(--out,#322C3D);"></div>
+  </div>
+  <div style="padding:8px 16px 0;flex:none;font-size:12px;color:var(--tx3,#7C7589);font-weight:600;">Étape 3/4 · Détails</div>
+
+  <div style="flex:1;overflow:hidden;padding:18px 16px 0;">
+    <!-- thumbnail preview -->
+    <div style="display:flex;gap:12px;margin-bottom:20px;">
+      <div style="position:relative;width:150px;flex:none;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:var(--stripe,#241F2B);"><span style="position:absolute;right:5px;bottom:5px;background:#000000cc;color:#fff;font-size:10px;font-weight:600;padding:1px 5px;border-radius:4px;">3:12</span></div>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;"><div style="font-size:13px;font-weight:600;margin-bottom:8px;">Miniature</div><button style="border:1px solid var(--out,#4A3E6E);background:var(--s2,#241F2B);color:var(--tx,#F4F1F8);border-radius:999px;padding:8px 14px;font:600 12.5px 'Plus Jakarta Sans';display:flex;align-items:center;gap:6px;width:fit-content;"><span class="ms" style="font-size:16px;">image</span>Changer</button></div>
+    </div>
+
+    <!-- titre -->
+    <div style="position:relative;border:1px solid var(--out,#4A3E6E);border-radius:12px;padding:19px 14px 8px;margin-bottom:16px;"><span style="position:absolute;top:-8px;left:12px;background:var(--bg,#121016);padding:0 6px;font-size:12px;color:var(--acc,#B69DF8);">Titre</span><span style="font-size:15px;">Ciel ouvert — Clip officiel</span></div>
+    <!-- description -->
+    <div style="position:relative;border:1px solid var(--out,#4A3E6E);border-radius:12px;padding:19px 14px 12px;margin-bottom:18px;height:82px;"><span style="position:absolute;top:-8px;left:12px;background:var(--bg,#121016);padding:0 6px;font-size:12px;color:var(--acc,#B69DF8);">Description</span><span style="font-size:14px;color:var(--tx2,#B9B2C7);line-height:1.5;">Tourné entre Dakar et Paris. Réalisation : Théo Rivière.</span></div>
+
+    <!-- genre -->
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Genre</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="background:linear-gradient(135deg,#7C3AED,#4F46E5);color:#fff;font-size:13px;font-weight:600;padding:7px 15px;border-radius:999px;">Afrobeat</span>
+      <span style="background:var(--s2,#241F2B);color:var(--tx2,#B9B2C7);font-size:13px;font-weight:600;padding:7px 15px;border-radius:999px;border:1px solid var(--out,#322C3D);">Pop</span>
+      <span style="background:var(--s2,#241F2B);color:var(--tx2,#B9B2C7);font-size:13px;font-weight:600;padding:7px 15px;border-radius:999px;border:1px solid var(--out,#322C3D);">RnB</span>
+      <span style="background:var(--s2,#241F2B);color:var(--tx2,#B9B2C7);font-size:13px;font-weight:600;padding:7px 15px;border-radius:999px;border:1px solid var(--out,#322C3D);">Rap</span>
+    </div>
+  </div>
+
+  <div style="flex:none;padding:12px 16px 22px;border-top:1px solid var(--out,#322C3D);">
+    <button style="width:100%;border:0;border-radius:999px;padding:15px;font:700 15px 'Plus Jakarta Sans';color:#fff;background:linear-gradient(135deg,#7C3AED,#4F46E5);">Continuer</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}"></script>
+</body>
+</html>

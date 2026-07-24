@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  .ms { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; line-height: 1; -webkit-font-feature-settings: 'liga'; }
+</style>
+</helmet>
+
+<div style="width:390px;height:844px;background:var(--bg,#121016);color:var(--tx,#F4F1F8);font-family:'Plus Jakarta Sans',sans-serif;display:flex;flex-direction:column;overflow:hidden;">
+
+  <div style="height:56px;flex:none;display:flex;align-items:center;gap:14px;padding:16px 16px 0;">
+    <span class="ms" style="font-size:26px;">arrow_back</span>
+    <span style="font-size:18px;font-weight:700;">Ma candidature</span>
+  </div>
+
+  <div style="flex:1;overflow:hidden;padding:20px 20px 0;">
+
+    <!-- status hero -->
+    <div style="background:var(--pc,#35216B);border:1px solid var(--pri2,#8B5CF6);border-radius:16px;padding:20px;margin-bottom:26px;display:flex;align-items:center;gap:14px;">
+      <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;flex:none;"><span class="ms" style="font-size:26px;color:#fff;">hourglass_top</span></div>
+      <div><div style="font-size:16px;font-weight:700;color:var(--onpc,#E9DDFF);">En cours d'analyse</div><div style="font-size:12.5px;color:var(--onpc,#E9DDFF);opacity:.8;margin-top:2px;">Réponse estimée sous 48 h · déposée le 21 juil.</div></div>
+    </div>
+
+    <!-- timeline -->
+    <div style="font-size:13px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--tx3,#7C7589);margin-bottom:18px;">Suivi</div>
+
+    <!-- step 1 done -->
+    <div style="display:flex;gap:16px;">
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--ok,#4ADE80);display:flex;align-items:center;justify-content:center;flex:none;"><span class="ms" style="font-size:18px;color:#08260f;font-variation-settings:'FILL' 1;">check</span></div>
+        <div style="width:2px;flex:1;background:var(--ok,#4ADE80);min-height:34px;"></div>
+      </div>
+      <div style="padding-bottom:22px;"><div style="font-size:15px;font-weight:700;">Candidature envoyée</div><div style="font-size:12.5px;color:var(--tx3,#7C7589);margin-top:2px;">21 juil. 2026 · 14:32</div></div>
+    </div>
+    <!-- step 2 active -->
+    <div style="display:flex;gap:16px;">
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 0 0 4px var(--pc,#35216B);"><span class="ms" style="font-size:17px;color:#fff;">search</span></div>
+        <div style="width:2px;flex:1;background:var(--out,#322C3D);min-height:34px;"></div>
+      </div>
+      <div style="padding-bottom:22px;"><div style="font-size:15px;font-weight:700;">Analyse par l'équipe</div><div style="font-size:12.5px;color:var(--acc,#B69DF8);margin-top:2px;">En cours — vérification du document &amp; des liens</div></div>
+    </div>
+    <!-- step 3 pending -->
+    <div style="display:flex;gap:16px;">
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--s2,#241F2B);border:2px solid var(--out,#322C3D);display:flex;align-items:center;justify-content:center;flex:none;"><span class="ms" style="font-size:16px;color:var(--tx3,#7C7589);">flag</span></div>
+      </div>
+      <div><div style="font-size:15px;font-weight:700;color:var(--tx3,#7C7589);">Décision</div><div style="font-size:12.5px;color:var(--tx3,#7C7589);margin-top:2px;">Tu recevras une notification</div></div>
+    </div>
+
+    <!-- info -->
+    <div style="display:flex;gap:10px;align-items:flex-start;background:var(--s1,#1B1820);border:1px solid var(--out,#322C3D);border-radius:12px;padding:12px 13px;margin-top:26px;">
+      <span class="ms" style="font-size:19px;color:var(--info,#60A5FA);flex:none;">info</span>
+      <span style="font-size:12px;line-height:1.5;color:var(--tx2,#B9B2C7);">Ton document d'identité sera supprimé automatiquement dès la décision rendue.</span>
+    </div>
+  </div>
+
+  <div style="flex:none;padding:12px 16px 22px;">
+    <button style="width:100%;border:1px solid var(--out,#4A3E6E);background:transparent;color:var(--err,#FF6B6B);border-radius:999px;padding:13px;font:600 14px 'Plus Jakarta Sans';">Annuler ma candidature</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}"></script>
+</body>
+</html>

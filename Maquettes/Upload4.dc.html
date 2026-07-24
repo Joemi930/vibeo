@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  .ms { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; line-height: 1; -webkit-font-feature-settings: 'liga'; }
+</style>
+</helmet>
+
+<div style="width:390px;height:844px;background:var(--bg,#121016);color:var(--tx,#F4F1F8);font-family:'Plus Jakarta Sans',sans-serif;display:flex;flex-direction:column;overflow:hidden;">
+  <div style="height:44px;flex:none;"></div>
+  <div style="display:flex;align-items:center;gap:6px;padding:18px 16px 0;flex:none;">
+    <div style="flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,#7C3AED,#4F46E5);"></div>
+    <div style="flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,#7C3AED,#4F46E5);"></div>
+    <div style="flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,#7C3AED,#4F46E5);"></div>
+    <div style="flex:1;height:4px;border-radius:4px;background:linear-gradient(90deg,#7C3AED,#4F46E5);"></div>
+  </div>
+  <div style="padding:8px 16px 0;flex:none;font-size:12px;color:var(--tx3,#7C7589);font-weight:600;">Étape 4/4 · Envoi</div>
+
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 34px;text-align:center;">
+    <div style="width:108px;height:108px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#4F46E5);display:flex;align-items:center;justify-content:center;margin-bottom:26px;box-shadow:0 14px 40px #7c3aed55;"><span class="ms" style="font-size:60px;color:#fff;font-variation-settings:'FILL' 1;">check</span></div>
+    <div style="font-size:22px;font-weight:800;letter-spacing:-0.01em;margin-bottom:10px;">Clip envoyé !</div>
+    <div style="font-size:14px;line-height:1.6;color:var(--tx2,#B9B2C7);">« Ciel ouvert — Clip officiel » est en cours de modération. Tu recevras une notification dès sa publication (généralement sous 2 h).</div>
+
+    <div style="width:100%;background:var(--s1,#1B1820);border:1px solid var(--out,#322C3D);border-radius:14px;padding:14px 16px;margin-top:26px;display:flex;align-items:center;gap:12px;text-align:left;">
+      <div style="position:relative;width:84px;flex:none;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:var(--stripe,#241F2B);"></div>
+      <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">Ciel ouvert — Clip officiel</div><div style="margin-top:6px;"><span style="display:inline-flex;align-items:center;gap:4px;background:var(--warnb,#33270A);color:var(--warn,#FBBF24);font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;"><span class="ms" style="font-size:13px;">schedule</span>En modération</span></div></div>
+    </div>
+  </div>
+
+  <div style="flex:none;padding:12px 16px 22px;display:flex;gap:10px;">
+    <button style="flex:1;border:1px solid var(--out,#4A3E6E);background:transparent;color:var(--tx,#F4F1F8);border-radius:999px;padding:14px;font:600 14px 'Plus Jakarta Sans';">Voir le Studio</button>
+    <button style="flex:1;border:0;border-radius:999px;padding:14px;font:700 14px 'Plus Jakarta Sans';color:#fff;background:linear-gradient(135deg,#7C3AED,#4F46E5);">Nouveau clip</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}"></script>
+</body>
+</html>
