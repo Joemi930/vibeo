@@ -6,6 +6,22 @@
       "runtimeExecutable": "flutter",
       "runtimeArgs": [
         "run",
+        "--release",
+        "-d",
+        "web-server",
+        "--web-hostname",
+        "127.0.0.1",
+        "--web-port",
+        "8080",
+        "--dart-define-from-file=env.json"
+      ],
+      "port": 8080
+    },
+    {
+      "name": "vibeo-web-dev",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
         "-d",
         "web-server",
         "--web-hostname",
