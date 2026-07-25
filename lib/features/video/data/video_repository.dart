@@ -66,12 +66,22 @@ abstract class VideoRepository {
   });
 
   /// Met à jour les champs éditables d'un clip.
+  ///
+  /// Seuls les champs fournis sont modifiés. [clearDescription] et
+  /// [clearGenre] permettent de vider un champ, ce qu'un `null` ne saurait
+  /// exprimer (il signifie « ne touche pas »).
   Future<Video> updateVideo({
     required String videoId,
     String? title,
     String? description,
     int? genreId,
+    String? thumbnailPath,
+    bool clearDescription = false,
+    bool clearGenre = false,
   });
+
+  /// Supprime un fichier de miniature devenu inutile (remplacement).
+  Future<void> removeThumbnailFile(String storagePath);
 
   /// Supprime un clip et ses fichiers.
   Future<void> deleteVideo(Video video);
@@ -247,18 +257,31 @@ class SupabaseVideoRepository implements VideoRepository {
     String? title,
     String? description,
     int? genreId,
+    String? thumbnailPath,
+    bool clearDescription = false,
+    bool clearGenre = false,
   }) async {
     final row = await _client
         .from(_videosTable)
         .update({
           'title': ?title,
-          'description': ?description,
-          'genre_id': ?genreId,
+          if (clearDescription)
+            'description': null
+          else
+            'description': ?description,
+          if (clearGenre) 'genre_id': null else 'genre_id': ?genreId,
+          'thumbnail_path': ?thumbnailPath,
         })
         .eq('id', videoId)
         .select(_selectWithArtist)
         .single();
     return Video.fromJson(row);
+  }
+
+  @override
+  Future<void> removeThumbnailFile(String storagePath) async {
+    if (storagePath.isEmpty) return;
+    await _client.storage.from(_thumbnailsBucket).remove([storagePath]);
   }
 
   @override

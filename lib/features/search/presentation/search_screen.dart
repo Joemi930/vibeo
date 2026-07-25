@@ -1,41 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/widgets/vibeo_app_bar.dart';
+import 'providers/search_providers.dart';
+import 'widgets/artist_results.dart';
+import 'widgets/clip_results.dart';
+import 'widgets/search_bar_field.dart';
+import 'widgets/search_genre_filter_row.dart';
+import 'widgets/search_tab_selector.dart';
 
-/// Recherche — squelette de Phase 1. La recherche réelle (clips/artistes,
-/// filtres genre) arrive en Phase 3.
-class SearchScreen extends StatelessWidget {
+/// Recherche de clips et d'artistes (voir `Maquettes/Search.dc.html`).
+///
+/// Publique : accessible sans compte, contrairement à la Bibliothèque.
+class SearchScreen extends ConsumerWidget {
   const SearchScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tab = ref.watch(searchTabProvider);
+
     return Scaffold(
       appBar: const VibeoAppBar(title: 'Recherche'),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.search_rounded,
-                size: 56,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(height: 16),
-              Text('Recherche', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Text(
-                'Recherche de clips et d\'artistes à venir.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+      body: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: SearchBarField(),
           ),
-        ),
+          // Le filtre par genre ne s'applique qu'aux clips : masqué sur
+          // l'onglet Artistes plutôt que grisé, pour ne pas laisser un
+          // contrôle inerte à l'écran.
+          if (tab == SearchTab.clips) const SearchGenreFilterRow(),
+          const SearchTabSelector(),
+          Expanded(
+            child: tab == SearchTab.clips
+                ? const ClipResults()
+                : const ArtistResults(),
+          ),
+        ],
       ),
     );
   }

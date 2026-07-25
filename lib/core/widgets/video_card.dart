@@ -161,10 +161,18 @@ class _VideoMeta extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-        Text(
-          views,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+        // `Flexible` évite un débordement quand la colonne de texte est très
+        // étroite (vignette large sur un écran de 320 px, par exemple dans les
+        // résultats de recherche) : le compteur de vues s'abrège plutôt que de
+        // déborder.
+        Flexible(
+          child: Text(
+            views,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       ],

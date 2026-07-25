@@ -23,6 +23,18 @@ final currentRoleProvider = Provider<UserRole?>((ref) {
   return ref.watch(currentProfileProvider).asData?.value?.role;
 });
 
+/// Profil public d'un autre utilisateur (page artiste).
+///
+/// La lecture publique de `profiles` est ouverte depuis la Phase 2 : c'est ce
+/// qui permet d'afficher le nom d'un artiste sous ses clips.
+final profileByIdProvider = FutureProvider.family<Profile?, String>((
+  ref,
+  userId,
+) async {
+  if (userId.isEmpty) return null;
+  return ref.watch(authRepositoryProvider).fetchProfile(userId);
+});
+
 /// Résout une URL signée temporaire pour un chemin d'avatar du bucket privé.
 final avatarSignedUrlProvider = FutureProvider.family<String?, String?>((
   ref,

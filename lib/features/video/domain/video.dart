@@ -3,9 +3,9 @@ import 'video_status.dart';
 
 /// Clip vidéo, miroir de la table `videos`.
 ///
-/// Les compteurs [viewCount] et [likeCount] sont en lecture seule côté client :
-/// ils sont alimentés par des triggers SQL et ne sont jamais sérialisés dans
-/// [toJson].
+/// Les compteurs [viewCount], [likeCount] et [commentCount] sont en lecture
+/// seule côté client : ils sont alimentés par des triggers SQL et ne sont
+/// jamais sérialisés dans [toJson].
 class Video {
   const Video({
     required this.id,
@@ -21,6 +21,7 @@ class Video {
     this.sizeBytes,
     this.viewCount = 0,
     this.likeCount = 0,
+    this.commentCount = 0,
     this.publishedAt,
     this.artist,
   });
@@ -42,6 +43,7 @@ class Video {
   final VideoStatus status;
   final int viewCount;
   final int likeCount;
+  final int commentCount;
   final DateTime? publishedAt;
   final DateTime createdAt;
 
@@ -111,6 +113,7 @@ class Video {
       status: VideoStatus.fromString(json['status'] as String?),
       viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
       likeCount: (json['like_count'] as num?)?.toInt() ?? 0,
+      commentCount: (json['comment_count'] as num?)?.toInt() ?? 0,
       publishedAt: publishedAtRaw is String
           ? DateTime.tryParse(publishedAtRaw)
           : null,
@@ -123,7 +126,8 @@ class Video {
 
   /// Sérialise les champs que le client a le droit d'écrire.
   ///
-  /// `view_count`, `like_count` et `published_at` sont volontairement exclus :
+  /// `view_count`, `like_count`, `comment_count` et `published_at` sont
+  /// volontairement exclus :
   /// ils sont gérés par des triggers SQL (règle n°6 de CLAUDE.md) et toute
   /// tentative d'écriture serait de toute façon annulée côté base.
   Map<String, dynamic> toJson() => {
@@ -148,15 +152,21 @@ class Video {
     VideoStatus? status,
     int? viewCount,
     int? likeCount,
+    int? commentCount,
     DateTime? publishedAt,
     ArtistSummary? artist,
+    // `null` signifie « ne touche pas » : ces drapeaux sont le seul moyen
+    // d'exprimer « vide ce champ », par exemple quand l'artiste efface la
+    // description ou retire le genre.
+    bool clearDescription = false,
+    bool clearGenre = false,
   }) {
     return Video(
       id: id,
       artistId: artistId,
       title: title ?? this.title,
-      description: description ?? this.description,
-      genreId: genreId ?? this.genreId,
+      description: clearDescription ? null : (description ?? this.description),
+      genreId: clearGenre ? null : (genreId ?? this.genreId),
       videoPath: videoPath,
       thumbnailPath: thumbnailPath ?? this.thumbnailPath,
       durationSeconds: durationSeconds,
@@ -164,6 +174,7 @@ class Video {
       status: status ?? this.status,
       viewCount: viewCount ?? this.viewCount,
       likeCount: likeCount ?? this.likeCount,
+      commentCount: commentCount ?? this.commentCount,
       publishedAt: publishedAt ?? this.publishedAt,
       createdAt: createdAt,
       artist: artist ?? this.artist,
@@ -185,6 +196,7 @@ class Video {
       other.status == status &&
       other.viewCount == viewCount &&
       other.likeCount == likeCount &&
+      other.commentCount == commentCount &&
       other.publishedAt == publishedAt &&
       other.createdAt == createdAt;
 
@@ -202,6 +214,7 @@ class Video {
     status,
     viewCount,
     likeCount,
+    commentCount,
     publishedAt,
     createdAt,
   );

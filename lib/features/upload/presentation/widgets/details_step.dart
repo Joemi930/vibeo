@@ -7,6 +7,7 @@ import '../../../video/presentation/providers/video_providers.dart';
 import '../../data/video_compressor.dart';
 import '../providers/upload_providers.dart';
 import 'banners.dart';
+import 'thumbnail_field.dart';
 
 /// Étape 3 — titre, description et genre (`Maquettes/Upload3.dc.html`).
 class DetailsStep extends ConsumerStatefulWidget {
@@ -82,7 +83,7 @@ class _DetailsStepState extends ConsumerState<DetailsStep> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _ThumbnailPreview(compressed: widget.compressed),
+                      const ThumbnailPicker(),
                       const SizedBox(height: 20),
                       TextFormField(
                         controller: _titleController,
@@ -179,45 +180,26 @@ class _DetailsStepState extends ConsumerState<DetailsStep> {
   }
 }
 
-class _ThumbnailPreview extends StatelessWidget {
-  const _ThumbnailPreview({required this.compressed});
-
-  final CompressedVideo? compressed;
+/// Aperçu de la miniature du parcours de publication.
+///
+/// Par défaut, l'image est extraite du clip à 10 % de sa durée (les premières
+/// images sont souvent noires). L'artiste peut la remplacer par un fichier à
+/// lui, et revenir à l'image automatique.
+class ThumbnailPicker extends ConsumerWidget {
+  const ThumbnailPicker({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final thumbnail = compressed?.thumbnailBytes;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final upload = ref.watch(uploadControllerProvider);
+    final controller = ref.read(uploadControllerProvider.notifier);
 
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: thumbnail != null && thumbnail.isNotEmpty
-            ? Image.memory(thumbnail, fit: BoxFit.cover)
-            : Container(
-                color: theme.colorScheme.surfaceContainerHighest,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.image_not_supported_outlined,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Miniature indisponible sur le web',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-      ),
+    return ThumbnailField(
+      bytes: upload.thumbnailBytes,
+      enabled: !upload.isBusy,
+      onChoose: controller.chooseThumbnail,
+      onReset: upload.hasCustomThumbnail
+          ? controller.useAutomaticThumbnail
+          : null,
     );
   }
 }

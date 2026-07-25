@@ -29,9 +29,18 @@ class AppRoutes {
   // ci-dessous à construire un lien concret (partage, navigation interne).
   static const String videoPattern = '/video/:videoId';
   static const String artistPattern = '/artist/:artistId';
+  static const String editVideoPattern = '/studio/video/:videoId/edit';
+
+  /// Détail d'une playlist. Sous-route de la Bibliothèque : elle reste donc
+  /// dans le shell, ce qui préserve la barre de navigation et le mini-player.
+  static const String playlistSubPath = 'playlist/:playlistId';
+  static String playlist(String playlistId) => '/library/playlist/$playlistId';
 
   /// Lecteur d'un clip — c'est aussi la cible des liens de partage.
   static String video(String videoId) => '/video/$videoId';
+
+  /// Modification d'un clip par son artiste (réservée au Studio).
+  static String editVideo(String videoId) => '/studio/video/$videoId/edit';
 
   /// Page publique d'un artiste.
   static String artist(String artistId) => '/artist/$artistId';

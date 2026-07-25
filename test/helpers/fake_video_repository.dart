@@ -127,9 +127,27 @@ class FakeVideoRepository implements VideoRepository {
     String? title,
     String? description,
     int? genreId,
+    String? thumbnailPath,
+    bool clearDescription = false,
+    bool clearGenre = false,
   }) async {
     calls.add('updateVideo:$videoId');
-    return videos.firstWhere((v) => v.id == videoId);
+    final index = videos.indexWhere((v) => v.id == videoId);
+    final updated = videos[index].copyWith(
+      title: title,
+      description: clearDescription ? null : description,
+      genreId: clearGenre ? null : genreId,
+      thumbnailPath: thumbnailPath,
+      clearDescription: clearDescription,
+      clearGenre: clearGenre,
+    );
+    videos = [...videos]..[index] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> removeThumbnailFile(String storagePath) async {
+    calls.add('removeThumbnailFile:$storagePath');
   }
 
   @override

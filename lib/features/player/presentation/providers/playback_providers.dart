@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../core/utils/dev_log.dart';
+
 import '../../../../core/constants/media_limits.dart';
 import '../../../video/domain/video.dart';
 import '../../../video/presentation/providers/video_providers.dart';
@@ -125,11 +127,12 @@ class PlaybackController extends Notifier<PlaybackState> {
       await _startVideo(url, Duration.zero);
     } catch (error, stack) {
       // L'utilisateur ne voit qu'un message neutre, mais la cause réelle doit
-      // rester diagnosticable en développement.
-      debugPrint('Vibeo — échec d\'ouverture du lecteur : $error\n$stack');
+      // rester diagnosticable : c'est ce qui manquait quand la lecture échouait
+      // sans qu'on puisse distinguer un codec refusé d'un problème de réseau.
+      logError('échec d\'ouverture du lecteur', error, stack);
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Lecture impossible. Vérifie ta connexion.',
+        errorMessage: _readableError(error.toString()),
       );
     }
   }
@@ -142,20 +145,20 @@ class PlaybackController extends Notifier<PlaybackState> {
     controller.addListener(_onVideoTick);
 
     // Les navigateurs refusent de démarrer une vidéo avec du son sans geste
-    // direct de l'utilisateur : le `play()` est alors rejeté. Ce n'est pas une
-    // erreur de lecture — on reste simplement en pause, gros bouton lecture
-    // affiché, et le prochain appui démarre le clip.
-    var started = true;
+    // direct de l'utilisateur. Le `play()` n'échoue pas toujours par exception :
+    // il peut aussi être ignoré silencieusement. On lit donc l'état réel du
+    // contrôleur plutôt que de supposer que la lecture a démarré — sinon le
+    // bouton affiche « pause » alors que rien ne bouge.
     try {
       await controller.play();
-    } catch (_) {
-      started = false;
+    } catch (error) {
+      logError('démarrage automatique refusé', error);
     }
 
     state = state.copyWith(
       mode: PlaybackMode.video,
       isLoading: false,
-      isPlaying: started,
+      isPlaying: controller.value.isPlaying,
       duration: controller.value.duration,
       position: from,
       clearError: true,
@@ -164,8 +167,24 @@ class PlaybackController extends Notifier<PlaybackState> {
 
   void _onVideoTick() {
     final controller = _videoController;
-    if (controller == null || !controller.value.isInitialized) return;
+    if (controller == null) return;
     final value = controller.value;
+
+    // Une erreur peut survenir bien après l'initialisation (flux interrompu,
+    // image que le décodeur refuse en cours de route) : sans ce relais, le
+    // lecteur restait figé sur un écran noir sans explication.
+    if (value.hasError) {
+      final description = value.errorDescription ?? '';
+      logError('erreur de lecture', description);
+      state = state.copyWith(
+        isLoading: false,
+        isPlaying: false,
+        errorMessage: _readableError(description),
+      );
+      return;
+    }
+
+    if (!value.isInitialized) return;
     state = state.copyWith(
       position: value.position,
       duration: value.duration,
@@ -173,6 +192,28 @@ class PlaybackController extends Notifier<PlaybackState> {
       isLoading: value.isBuffering,
     );
     _maybeRecordView(value.position);
+  }
+
+  /// Traduit l'erreur du lecteur en message utile.
+  ///
+  /// Sur le web, `video_player` remonte le code `MediaError` du navigateur :
+  /// 4 (`MEDIA_ELEMENT_ERROR: Format error`) signifie que le fichier arrive bien
+  /// mais que le décodeur refuse ses codecs — un cas radicalement différent
+  /// d'une coupure réseau, et qu'il ne sert à rien de « réessayer ».
+  static String _readableError(String raw) {
+    final lower = raw.toLowerCase();
+    final isFormat =
+        lower.contains('format') ||
+        lower.contains('src_not_supported') ||
+        lower.contains('not supported') ||
+        lower.contains('decode');
+
+    final message = isFormat
+        ? 'Ce clip utilise un format vidéo que ce navigateur ne sait pas lire.'
+        : 'Lecture impossible. Vérifie ta connexion.';
+
+    if (!kDebugMode || raw.isEmpty) return message;
+    return '$message\n\n[debug] $raw';
   }
 
   /// Comptabilise la vue une fois le seuil de lecture franchi.

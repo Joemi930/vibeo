@@ -16,9 +16,10 @@ class SelectStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final supportsCompression = ref
-        .watch(videoCompressorProvider)
-        .supportsCompression;
+    // Optimiste pendant la détection : afficher l'avertissement puis le retirer
+    // ferait clignoter l'écran alors que le cas est rare.
+    final supportsCompression =
+        ref.watch(compressionSupportProvider).asData?.value ?? true;
     final subtitle =
         'MP4 ou MOV · jusqu\'à ${MediaLimits.formatBytes(MediaLimits.maxVideoBytes)} · '
         '${MediaLimits.maxVideoDuration.inMinutes} min max';
@@ -87,11 +88,12 @@ class SelectStep extends ConsumerWidget {
               ),
               if (!supportsCompression) ...[
                 const SizedBox(height: 16),
-                const InfoBanner(
+                InfoBanner(
                   text:
-                      "La compression n'est pas disponible dans le "
-                      'navigateur. Pour les fichiers volumineux, publie '
-                      "plutôt depuis l'application Android.",
+                      'Ce navigateur ne sait pas compresser de vidéo : ton '
+                      'clip sera envoyé tel quel, dans la limite de '
+                      '${MediaLimits.formatBytes(MediaLimits.maxVideoBytes)}. '
+                      'Chrome, Edge et Safari savent le faire.',
                 ),
               ],
               if (errorMessage != null) ...[

@@ -287,6 +287,9 @@ class _PublishButton extends StatelessWidget {
   }
 }
 
+/// Actions proposées sur un clip du Studio.
+enum _VideoAction { edit, delete }
+
 class _StudioVideoRow extends ConsumerWidget {
   const _StudioVideoRow({required this.video, required this.artistId});
 
@@ -346,10 +349,31 @@ class _StudioVideoRow extends ConsumerWidget {
           onTap: video.isPublished
               ? () => context.push(AppRoutes.video(video.id))
               : null,
-          trailing: IconButton(
+          trailing: PopupMenuButton<_VideoAction>(
             tooltip: 'Options',
             icon: const Icon(Icons.more_vert_rounded),
-            onPressed: () => _confirmDelete(context, ref),
+            onSelected: (action) => switch (action) {
+              _VideoAction.edit => context.push(AppRoutes.editVideo(video.id)),
+              _VideoAction.delete => _confirmDelete(context, ref),
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: _VideoAction.edit,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.edit_outlined),
+                  title: Text('Modifier'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _VideoAction.delete,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.delete_outline_rounded),
+                  title: Text('Supprimer'),
+                ),
+              ),
+            ],
           ),
         ),
         Padding(

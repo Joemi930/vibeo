@@ -31,6 +31,17 @@
 
   <title>vibeo</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    Préparation des clips dans le navigateur (compression 720p H.264 via
+    WebCodecs). `mediabunny.min.js` est une copie non modifiée du paquet npm
+    `mediabunny` 1.51.0 (MPL-2.0, licence dans js/mediabunny.LICENSE.txt) :
+    servie depuis notre propre domaine, jamais depuis un CDN.
+    Chargé avant Flutter et sans `async` : `vibeo_media.js` a besoin du global
+    `Mediabunny`, et Dart a besoin du global `vibeoMedia`.
+  -->
+  <script src="js/mediabunny.min.js"></script>
+  <script src="js/vibeo_media.js"></script>
 </head>
 <body>
   <!--

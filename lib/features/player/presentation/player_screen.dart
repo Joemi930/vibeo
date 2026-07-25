@@ -8,6 +8,7 @@ import '../../video/presentation/providers/video_providers.dart';
 import 'providers/playback_providers.dart';
 import 'widgets/action_pills_row.dart';
 import 'widgets/artist_row.dart';
+import 'widgets/comments_section.dart';
 import 'widgets/description_card.dart';
 import 'widgets/player_skeleton.dart';
 import 'widgets/video_surface.dart';
@@ -32,6 +33,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   /// qu'une seule fois par clip (et pas à chaque reconstruction du widget).
   String? _openedVideoId;
 
+  /// Permet à la pilule « Commenter » de faire défiler jusqu'au fil de
+  /// commentaires puis d'y ouvrir le clavier, quelle que soit la mise en page
+  /// (mobile ou colonne web) — un seul des deux est monté à la fois.
+  final GlobalKey<CommentsSectionState> _commentsKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     final videoAsync = ref.watch(videoByIdProvider(widget.videoId));
@@ -53,8 +59,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
           error: (_, _) => _PlayerErrorState(
             onRetry: () => ref.invalidate(videoByIdProvider(widget.videoId)),
           ),
-          data: (video) =>
-              video == null ? const _PlayerEmptyState() : _PlayerBody(video),
+          data: (video) => video == null
+              ? const _PlayerEmptyState()
+              : _PlayerBody(video, commentsKey: _commentsKey),
         ),
       ),
     );
@@ -77,9 +84,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
 /// Bascule entre la mise en page mobile (une colonne) et web (deux colonnes)
 /// au-delà de 900 px de large (`Maquettes/WebPlayer.dc.html`).
 class _PlayerBody extends StatelessWidget {
-  const _PlayerBody(this.video);
+  const _PlayerBody(this.video, {required this.commentsKey});
 
   final Video video;
+  final GlobalKey<CommentsSectionState> commentsKey;
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +104,11 @@ class _PlayerBody extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         VideoSurface(video: video, borderRadius: 16),
-                        _InfoColumn(video: video, showComments: false),
+                        _InfoColumn(
+                          video: video,
+                          showComments: false,
+                          commentsKey: commentsKey,
+                        ),
                       ],
                     ),
                   ),
@@ -112,9 +124,9 @@ class _PlayerBody extends StatelessWidget {
                       ),
                     ),
                   ),
-                  child: const SingleChildScrollView(
-                    padding: EdgeInsets.all(20),
-                    child: _CommentsPlaceholder(),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: CommentsSection(key: commentsKey, videoId: video.id),
                   ),
                 ),
               ),
@@ -127,7 +139,11 @@ class _PlayerBody extends StatelessWidget {
             VideoSurface(video: video),
             Expanded(
               child: SingleChildScrollView(
-                child: _InfoColumn(video: video, showComments: true),
+                child: _InfoColumn(
+                  video: video,
+                  showComments: true,
+                  commentsKey: commentsKey,
+                ),
               ),
             ),
           ],
@@ -138,10 +154,15 @@ class _PlayerBody extends StatelessWidget {
 }
 
 class _InfoColumn extends StatelessWidget {
-  const _InfoColumn({required this.video, required this.showComments});
+  const _InfoColumn({
+    required this.video,
+    required this.showComments,
+    required this.commentsKey,
+  });
 
   final Video video;
   final bool showComments;
+  final GlobalKey<CommentsSectionState> commentsKey;
 
   @override
   Widget build(BuildContext context) {
@@ -174,50 +195,18 @@ class _InfoColumn extends StatelessWidget {
           const SizedBox(height: 14),
           ArtistSubscribeRow(video: video),
           const SizedBox(height: 14),
-          ActionPillsRow(video: video),
+          ActionPillsRow(
+            video: video,
+            onComment: () => commentsKey.currentState?.requestFocus(),
+          ),
           if (description != null && description.isNotEmpty) ...[
             const SizedBox(height: 16),
             DescriptionCard(text: description),
           ],
           if (showComments) ...[
             const SizedBox(height: 20),
-            const _CommentsPlaceholder(),
+            CommentsSection(key: commentsKey, videoId: video.id),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _CommentsPlaceholder extends StatelessWidget {
-  const _CommentsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Commentaires',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Les commentaires arrivent en Phase 3.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
         ],
       ),
     );

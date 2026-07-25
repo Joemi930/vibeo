@@ -89,3 +89,120 @@ class VideoCardSkeleton extends StatelessWidget {
     );
   }
 }
+
+/// Squelette d'une ligne de clip horizontale, calqué sur `VideoListTile`.
+///
+/// Partagé par la Bibliothèque (historique, contenu d'une playlist) et la
+/// Recherche (résultats « Clips ») : même mise en page, seule la largeur de
+/// vignette diffère d'un écran à l'autre.
+class VideoListTileSkeleton extends StatelessWidget {
+  const VideoListTileSkeleton({this.thumbnailWidth = 150, super.key});
+
+  final double thumbnailWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: thumbnailWidth,
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: SkeletonBox(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SkeletonBox(height: 14),
+                const SizedBox(height: 8),
+                const FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: 0.45,
+                  child: SkeletonBox(height: 11),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Colonne de squelettes centrée et contrainte en largeur, commune à tout
+/// écran présentant une liste verticale (Bibliothèque, Recherche) pendant son
+/// chargement.
+class RowListSkeleton extends StatelessWidget {
+  const RowListSkeleton({
+    required this.itemBuilder,
+    this.count = 6,
+    this.maxWidth = 720,
+    super.key,
+  });
+
+  final WidgetBuilder itemBuilder;
+  final int count;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+          itemCount: count,
+          itemBuilder: (context, _) => itemBuilder(context),
+        ),
+      ),
+    );
+  }
+}
+
+/// Squelette d'une ligne d'artiste (avatar rond + nom), abonnements/recherche.
+class ArtistRowSkeleton extends StatelessWidget {
+  const ArtistRowSkeleton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        children: [
+          const SkeletonBox(
+            width: 44,
+            height: 44,
+            borderRadius: BorderRadius.all(Radius.circular(22)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: 0.5,
+                  child: SkeletonBox(height: 14),
+                ),
+                const SizedBox(height: 8),
+                const FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: 0.3,
+                  child: SkeletonBox(height: 11),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

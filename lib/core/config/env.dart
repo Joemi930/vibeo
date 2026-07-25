@@ -15,6 +15,12 @@ class Env {
     'SUPABASE_ANON_KEY',
   );
 
+  /// Adresse publique du site, utilisée pour construire les liens de partage
+  /// depuis Android (sur le web, l'origine réelle de la page est préférée).
+  ///
+  /// Sans valeur, le partage se fait sans lien plutôt qu'avec un lien mort.
+  static const String webBaseUrl = String.fromEnvironment('WEB_BASE_URL');
+
   /// Vrai si les deux variables indispensables sont fournies.
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;

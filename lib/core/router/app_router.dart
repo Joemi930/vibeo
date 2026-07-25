@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/artist/presentation/artist_screen.dart';
 import '../../features/auth/domain/user_role.dart';
 import '../../features/auth/presentation/auth_screen.dart';
 import '../../features/auth/presentation/email_verification_screen.dart';
@@ -9,12 +10,14 @@ import '../../features/auth/presentation/providers/auth_providers.dart';
 import '../../features/auth/presentation/providers/guest_mode_provider.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/library/presentation/library_screen.dart';
+import '../../features/library/presentation/playlist_screen.dart';
 import '../../features/player/presentation/audio_mode_screen.dart';
 import '../../features/player/presentation/player_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/providers/profile_providers.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/studio/presentation/edit_video_screen.dart';
 import '../../features/studio/presentation/studio_screen.dart';
 import '../../features/upload/presentation/upload_flow_screen.dart';
 import '../widgets/main_scaffold.dart';
@@ -59,7 +62,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         // Studio et upload : réservés aux artistes. Tant que le profil n'est
         // pas chargé (rôle null), on laisse passer — l'écran affiche son propre
         // état de chargement et la redirection se fera au rafraîchissement.
-        if (loc == AppRoutes.studio || loc == AppRoutes.upload) {
+        // `startsWith` couvre les écrans sous le Studio (modification d'un
+        // clip) : une comparaison stricte les laisserait sans garde.
+        if (loc.startsWith(AppRoutes.studio) || loc == AppRoutes.upload) {
           final role = ref.read(currentRoleProvider);
           if (role != null && role == UserRole.listener) {
             return AppRoutes.becomeArtist;
@@ -114,6 +119,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.library,
                 builder: (context, state) => const LibraryScreen(),
+                routes: [
+                  GoRoute(
+                    path: AppRoutes.playlistSubPath,
+                    builder: (context, state) => PlaylistScreen(
+                      playlistId: state.pathParameters['playlistId']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -137,6 +150,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const StudioScreen(),
       ),
       GoRoute(
+        path: AppRoutes.editVideoPattern,
+        builder: (context, state) =>
+            EditVideoScreen(videoId: state.pathParameters['videoId'] ?? ''),
+      ),
+      GoRoute(
         path: AppRoutes.upload,
         builder: (context, state) => const UploadFlowScreen(),
       ),
@@ -151,15 +169,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.audio,
         builder: (context, state) => const AudioModeScreen(),
       ),
-      // Squelettes navigables (implémentés dans les phases suivantes).
+      // Page publique d'un artiste — aussi accessible sans compte (RLS).
       GoRoute(
         path: AppRoutes.artistPattern,
-        builder: (context, state) => const PlaceholderScreen(
-          title: 'Artiste',
-          icon: Icons.person_pin_rounded,
-          phase: 'Phase 3',
-        ),
+        builder: (context, state) =>
+            ArtistScreen(artistId: state.pathParameters['artistId']!),
       ),
+      // Squelettes navigables (implémentés dans les phases suivantes).
       GoRoute(
         path: AppRoutes.becomeArtist,
         builder: (context, state) => const PlaceholderScreen(

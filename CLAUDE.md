@@ -28,10 +28,14 @@ Tu es l'architecte et le chef d'équipe, pas le développeur de base :
   Edge Functions (Deno/TypeScript)
 - **video_player + chewie** (lecture) · **just_audio + audio_service** (audio
   arrière-plan)
-- **video_compress** : compression 720p SUR L'APPAREIL avant upload (encodeurs
-  natifs, jamais de transcodage serveur — budget 0 €). Remplace
-  `ffmpeg_kit_flutter`, retiré par ses auteurs en 2025 — voir
-  `docs/ARCHITECTURE.md` §2. Plafond : **60 Mo / 4 min** par clip.
+- **Compression 720p SUR L'APPAREIL** avant upload, jamais de transcodage
+  serveur (budget 0 €). Plafond : **60 Mo / 4 min** par clip. Deux moteurs
+  derrière une même interface (`lib/features/upload/data/video_compressor.dart`) :
+  - Android : **video_compress** (encodeurs natifs). Remplace
+    `ffmpeg_kit_flutter`, retiré par ses auteurs en 2025 — voir
+    `docs/ARCHITECTURE.md` §2.
+  - Web : **WebCodecs**, piloté par `mediabunny` (copie vendorée dans
+    `web/js/`, MPL-2.0) via le module `web/js/vibeo_media.js`.
 - **IA : Gemini API** (défaut, multimodal, tier gratuit) via le module
   `supabase/functions/_shared/ai-provider.ts` — abstraction permettant de
   basculer sur DeepSeek (`AI_PROVIDER=deepseek`, texte uniquement).
@@ -113,8 +117,20 @@ corrects ✚ audit sécurité passé si zone sensible.
   (les hooks tournent sous Git Bash).
 - `video_compress` ne fonctionne pas sur le web (il dépend de `dart:io`) : il
   est isolé derrière un import conditionnel
-  (`lib/features/upload/data/video_compressor.dart`). Sur web, refuser les
-  fichiers > 60 Mo et uploader tel quel (publication surtout depuis Android).
+  (`lib/features/upload/data/video_compressor.dart`). Le web compresse par
+  WebCodecs à la place. **Firefox annonce l'API WebCodecs mais échoue à encoder
+  du H.264** : tester par `canEncodeVideo`, jamais par la présence de l'API ;
+  sans encodeur, le fichier part tel quel sous 60 Mo.
+- Sur le web, le fichier choisi **reste côté JavaScript** ; Dart n'en reçoit
+  qu'un identifiant. Charger les octets dans Dart faisait échouer la sélection
+  des gros fichiers.
+- Une contrainte `^3.0.4` fige la **majeure** : contrôler la version réellement
+  résolue dans `pubspec.lock`, pas celle écrite dans `pubspec.yaml`. C'est ainsi
+  qu'un `file_picker` de 2021 s'est retrouvé en production et cassait le web.
+- Un H.264 en profil **4:4:4** (`yuv444p`, ce que choisit ffmpeg depuis une
+  source RGB) n'est décodable par **aucun** navigateur, alors que
+  `canPlayType('video/mp4')` répond « probably » — il ne teste que le
+  conteneur. Toujours remonter le code `MediaError` réel.
 - `audio_service` nécessite une configuration AndroidManifest spécifique.
 - Tier gratuit Supabase : 1 Go de storage — afficher l'usage dans l'admin.
 - URLs signées Supabase sur web : configurer CORS du bucket.

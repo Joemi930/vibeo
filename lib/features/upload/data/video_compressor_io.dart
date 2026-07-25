@@ -17,7 +17,7 @@ class NativeVideoCompressor implements VideoCompressor {
   Subscription? _progressSubscription;
 
   @override
-  bool get supportsCompression => true;
+  Future<bool> get supportsCompression async => true;
 
   @override
   Future<CompressedVideo> compress(

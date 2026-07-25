@@ -36,9 +36,9 @@
 | Navigation | **go_router** | Deep links (partage de clips), web-friendly |
 | Backend | **Supabase** | Postgres + Auth + Storage + Edge Functions, gratuit |
 | Hébergement web | **Vercel** (build Flutter web) | Gratuit, CDN, headers sécurité |
-| Lecture vidéo | **video_player** + **chewie** | Streaming progressif MP4 |
+| Lecture vidéo | **video_player** | Streaming progressif MP4 (`chewie` retiré : lecteur écrit à la main pour coller aux maquettes) |
 | Audio arrière-plan | **just_audio** + **audio_service** | Notification média, mode "YT Music" |
-| Compression vidéo | **video_compress** (Android) | 720p AVANT upload → budget 0 € (voir note ci-dessous) |
+| Compression vidéo | **video_compress** (Android) · **WebCodecs + mediabunny** (web) | 720p AVANT upload → budget 0 € (voir note ci-dessous) |
 | IA | **Gemini API** (tier gratuit, multimodal) via Edge Functions | Vérif. artistes + carte d'identité + modération. Abstraction provider → bascule DeepSeek possible (texte uniquement) |
 | CI | **GitHub Actions** | analyze + tests + build à chaque push |
 
@@ -68,6 +68,45 @@ binaires FFmpeg embarqués. Conséquences assumées : APK nettement plus léger 
 aucune contrainte de licence GPL, en échange d'un contrôle par préréglages de
 qualité plutôt que par bitrate exact. `ffmpeg_kit_flutter_new` (fork
 communautaire maintenu) reste le repli si un contrôle fin devient nécessaire.
+
+**Décision de Phase 3 — la compression fonctionne aussi dans le navigateur.**
+La Phase 2 refusait tout fichier de plus de 60 Mo sur le web, en supposant que
+la publication se ferait « surtout depuis Android ». L'usage réel a démenti
+cette hypothèse. Le web compresse désormais lui aussi, via l'API **WebCodecs**
+(encodeur matériel du navigateur) pilotée par **mediabunny** — bibliothèque
+TypeScript sans dépendance, MPL-2.0, dont le bundle est **copié dans
+`web/js/`** et servi depuis notre propre domaine plutôt que depuis un CDN.
+Le calcul reste chez l'utilisateur : aucun transcodage serveur, donc budget 0 €
+préservé. Un transcodage côté serveur aurait été l'autre voie, mais les Edge
+Functions Deno ne peuvent pas exécuter ffmpeg et tout service de transcodage
+managé sort du budget.
+
+Deux conséquences d'architecture :
+- Le fichier choisi **ne quitte jamais le JavaScript** : Dart reçoit un
+  identifiant opaque (`VideoSource.webHandle`) et ne récupère que le MP4
+  compressé (≤ 60 Mo) et la miniature. Charger les octets côté Dart faisait
+  échouer la sélection des gros fichiers.
+- La détection de capacité passe par `canEncodeVideo`, pas par la présence de
+  l'API : **Firefox** expose WebCodecs mais échoue à encoder du H.264. Sans
+  encodeur exploitable, le fichier part tel quel sous le plafond, avec un
+  message explicite au-delà.
+
+Mesure réelle (Chrome, clip 960×960 de 3 s à 27 Mbit/s) : 10,4 Mo → 295 Ko en
+1,8 s, sortie MP4/H.264 720p relue sans erreur par un `<video>`.
+
+**Décision de Phase 3 — `file_picker` retiré.** La contrainte `^3.0.4` inscrite
+en Phase 2 résolvait la version de 2021 du paquet, dont l'implémentation web
+(`dart:html`, course entre un écouteur `focus` à 500 ms et le `FileReader`)
+rendait la sélection de fichier impossible dans le navigateur. Remplacé par
+`image_picker` sur Android et par un `<input type="file">` maison sur le web —
+ce dernier étant de toute façon nécessaire pour donner son `File` à mediabunny.
+
+**Décision de Phase 3 — les signalements survivent à leur cible.** Les clés
+étrangères de `reports` sont en `on delete set null`, et non `cascade` : une
+cascade FK s'exécute **hors RLS**, si bien que l'auteur d'un contenu signalé
+effaçait la preuve en supprimant son propre contenu. Les colonnes `target_kind`
+et `target_author_id`, renseignées en base par trigger (jamais par le client),
+conservent le contexte de modération et permettent de repérer un récidiviste.
 
 **Décision de Phase 2 — plafond ramené à 60 Mo / 4 min.** À 200 Mo par clip, le
 Go offert par le tier gratuit serait saturé en 5 vidéos. À 60 Mo — l'ordre de

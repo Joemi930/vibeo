@@ -42,11 +42,11 @@ dependencies:
   google_sign_in: ^7.2.0
   image_picker: ^1.2.3
   video_player: ^2.13.0
-  chewie: ^1.14.1
   just_audio: ^0.10.6
   audio_service: ^0.18.19
+  # Compression sur l'appareil : encodeurs natifs sur Android. Sur le web, la
+  # compression passe par WebCodecs (web/js/vibeo_media.js), pas par ce paquet.
   video_compress: ^3.1.4
-  file_picker: ^3.0.4
   share_plus: ^13.3.0
 
 dev_dependencies:
@@ -59,6 +59,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  # Utilisé uniquement en test, pour intercepter les requêtes HTTP d'un
+  # SupabaseClient de test sans jamais toucher au réseau (voir
+  # test/features/search/data/search_repository_test.dart).
+  http: ^1.6.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

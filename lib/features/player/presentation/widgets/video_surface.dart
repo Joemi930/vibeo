@@ -31,8 +31,18 @@ class VideoSurface extends ConsumerWidget {
         .asData
         ?.value;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
+    final isPlayingVideo =
+        videoController != null &&
+        videoController.value.isInitialized &&
+        !playback.isAudioMode;
+
+    // Sur le web, la vidéo est une *platform view* positionnée en CSS : la
+    // superposer à un clip arrondi et à un `FittedBox` la rendait invisible
+    // selon les navigateurs. Le clip n'est donc posé que s'il sert vraiment
+    // (lecteur web à coins arrondis), et l'affiche de miniature disparaît dès
+    // que l'image vidéo est là plutôt que de rester empilée dessous.
+    return _MaybeRounded(
+      radius: borderRadius,
       child: AspectRatio(
         aspectRatio: 16 / 9,
         child: ColoredBox(
@@ -40,16 +50,13 @@ class VideoSurface extends ConsumerWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (thumbnailUrl != null)
+              if (!isPlayingVideo && thumbnailUrl != null)
                 Image.network(
                   thumbnailUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
-              if (videoController != null &&
-                  videoController.value.isInitialized &&
-                  !playback.isAudioMode)
-                _VideoFrame(controller: videoController),
+              if (isPlayingVideo) _VideoFrame(controller: videoController),
               const _DarkVeil(),
               Positioned(
                 top: 14,
@@ -86,6 +93,21 @@ class VideoSurface extends ConsumerWidget {
   }
 }
 
+/// N'ajoute un clip arrondi que s'il a un effet, pour laisser la vue vidéo
+/// aussi peu enveloppée que possible sur le web.
+class _MaybeRounded extends StatelessWidget {
+  const _MaybeRounded({required this.radius, required this.child});
+
+  final double radius;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (radius <= 0) return child;
+    return ClipRRect(borderRadius: BorderRadius.circular(radius), child: child);
+  }
+}
+
 class _VideoFrame extends StatelessWidget {
   const _VideoFrame({required this.controller});
   final VideoPlayerController controller;
@@ -94,11 +116,12 @@ class _VideoFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = controller.value.size;
     if (size.width <= 0 || size.height <= 0) return const SizedBox.shrink();
-    return FittedBox(
-      fit: BoxFit.cover,
-      child: SizedBox(
-        width: size.width,
-        height: size.height,
+    // `contain` et non `cover` : un clip carré ou vertical est affiché en
+    // entier, avec des bandes noires, comme le fait tout lecteur vidéo. En
+    // `cover`, le haut et le bas d'un clip carré étaient purement coupés.
+    return Center(
+      child: AspectRatio(
+        aspectRatio: size.width / size.height,
         child: VideoPlayer(controller),
       ),
     );
