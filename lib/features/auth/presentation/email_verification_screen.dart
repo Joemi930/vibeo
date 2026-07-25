@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../core/widgets/vibeo_app_bar.dart';
 
 /// Écran affiché après une inscription nécessitant une confirmation par email.
 class EmailVerificationScreen extends ConsumerWidget {
@@ -14,7 +15,7 @@ class EmailVerificationScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(),
+      appBar: const VibeoAppBar(fallbackRoute: AppRoutes.auth),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(26),

@@ -8,7 +8,11 @@ import 'package:vibeo/features/auth/domain/user_role.dart';
 /// Implémentation de test de [AuthRepository] : aucun appel réseau, comportement
 /// configurable pour piloter les scénarios (succès, erreur d'auth, etc.).
 class FakeAuthRepository implements AuthRepository {
-  FakeAuthRepository({this.throwOnSignIn, this.throwOnSignUp});
+  FakeAuthRepository({
+    this.throwOnSignIn,
+    this.throwOnSignUp,
+    User? initialUser,
+  }) : _user = initialUser;
 
   /// Si non nul, [signIn] lève cette exception.
   final AuthException? throwOnSignIn;
@@ -20,6 +24,10 @@ class FakeAuthRepository implements AuthRepository {
 
   User? _user;
   Profile? profile;
+
+  /// Simule une connexion/déconnexion sans passer par [signIn] : utile pour
+  /// les tests qui n'ont besoin que d'un état « connecté » figé.
+  void setUser(User? user) => _user = user;
 
   // Journal d'appels pour les assertions de test.
   final List<String> calls = [];

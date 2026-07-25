@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibeo/core/router/app_routes.dart';
 import 'package:vibeo/core/theme/app_theme.dart';
+import 'package:vibeo/core/theme/theme_mode_provider.dart';
 import 'package:vibeo/features/auth/presentation/auth_screen.dart';
 import 'package:vibeo/features/auth/presentation/email_verification_screen.dart';
 import 'package:vibeo/features/auth/presentation/providers/auth_providers.dart';
@@ -23,6 +25,8 @@ void main() {
   ) async {
     final repo = FakeAuthRepository();
     addTearDown(repo.dispose);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
 
     final router = GoRouter(
       initialLocation: AppRoutes.auth,
@@ -39,7 +43,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repo)],
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repo),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
         child: MaterialApp.router(theme: AppTheme.dark, routerConfig: router),
       ),
     );

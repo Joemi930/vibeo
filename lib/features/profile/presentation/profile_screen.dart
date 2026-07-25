@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../core/widgets/verified_badge.dart';
+import '../../../core/widgets/vibeo_app_bar.dart';
 import '../../auth/domain/profile.dart';
 import '../../auth/domain/user_role.dart';
 import 'providers/profile_providers.dart';
@@ -17,13 +19,13 @@ class ProfileScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profil'),
+      appBar: VibeoAppBar(
+        title: 'Profil',
         actions: [
           IconButton(
             tooltip: 'Paramètres',
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.go(AppRoutes.settings),
+            onPressed: () => context.push(AppRoutes.settings),
           ),
         ],
       ),
@@ -70,13 +72,23 @@ class _ProfileView extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 18),
-            Center(
-              child: Text(
-                profile.resolvedName,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: Text(
+                    profile.resolvedName,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-              ),
+                if (profile.isArtist) ...[
+                  const SizedBox(width: 6),
+                  const VerifiedBadge(size: 20),
+                ],
+              ],
             ),
             const SizedBox(height: 4),
             Center(
@@ -105,6 +117,22 @@ class _ProfileView extends ConsumerWidget {
               icon: const Icon(Icons.edit_outlined),
               label: const Text('Modifier le profil'),
             ),
+            const SizedBox(height: 12),
+            // Un artiste est un utilisateur comme les autres : sa seule
+            // différence est l'accès au Studio (statistiques, publication,
+            // suppression de ses clips).
+            if (profile.isArtist)
+              OutlinedButton.icon(
+                onPressed: () => context.push(AppRoutes.studio),
+                icon: const Icon(Icons.video_settings_rounded),
+                label: const Text('Ouvrir le Studio'),
+              )
+            else
+              OutlinedButton.icon(
+                onPressed: () => context.push(AppRoutes.becomeArtist),
+                icon: const Icon(Icons.verified_outlined),
+                label: const Text('Devenir artiste'),
+              ),
           ],
         ),
       ),

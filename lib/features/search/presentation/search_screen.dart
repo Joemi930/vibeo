@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/vibeo_app_bar.dart';
+
 /// Recherche — squelette de Phase 1. La recherche réelle (clips/artistes,
 /// filtres genre) arrive en Phase 3.
 class SearchScreen extends StatelessWidget {
@@ -9,7 +11,7 @@ class SearchScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Recherche')),
+      appBar: const VibeoAppBar(title: 'Recherche'),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

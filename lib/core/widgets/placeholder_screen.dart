@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'vibeo_app_bar.dart';
+
 /// Écran squelette réutilisable pour les routes prévues mais non encore
-/// implémentées (Phase 1). Affiche un titre, une icône et une note « à venir »,
+/// implémentées. Affiche un titre, une icône et une note « à venir »,
 /// correct dans les deux thèmes.
 class PlaceholderScreen extends StatelessWidget {
   const PlaceholderScreen({
@@ -21,7 +23,7 @@ class PlaceholderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: VibeoAppBar(title: title),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

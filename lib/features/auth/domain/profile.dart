@@ -10,6 +10,7 @@ class Profile {
     this.displayName,
     this.avatarUrl,
     this.bio,
+    this.subscriberCount = 0,
   });
 
   final String id;
@@ -19,6 +20,10 @@ class Profile {
   final String? bio;
   final UserRole role;
   final DateTime createdAt;
+
+  /// Nombre d'abonnés, alimenté par trigger SQL (colonne `subscriber_count`).
+  /// Toujours 0 pour un auditeur.
+  final int subscriberCount;
 
   /// Nom à afficher (display_name si présent, sinon username).
   String get resolvedName =>
@@ -64,6 +69,7 @@ class Profile {
       bio: json['bio'] as String?,
       role: UserRole.fromString(json['role'] as String?),
       createdAt: createdAt,
+      subscriberCount: (json['subscriber_count'] as num?)?.toInt() ?? 0,
     );
   }
 

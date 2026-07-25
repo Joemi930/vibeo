@@ -4,14 +4,21 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
 import '../../../core/widgets/gradient_button.dart';
+import '../../../core/widgets/theme_toggle_switch.dart';
 import '../../../core/widgets/vibeo_logo.dart';
 import 'providers/auth_controller.dart';
+import 'providers/guest_mode_provider.dart';
 import 'widgets/google_button.dart';
 
 /// Écran d'authentification : bascule Connexion / Inscription, email + mot de
-/// passe, mot de passe oublié, connexion Google. Fidèle à `Maquettes/Auth.dc.html`.
+/// passe, mot de passe oublié, connexion Google, mode invité. Fidèle à
+/// `Maquettes/Auth.dc.html`.
 class AuthScreen extends ConsumerStatefulWidget {
-  const AuthScreen({super.key});
+  const AuthScreen({this.returnTo, super.key});
+
+  /// Destination à rejoindre après connexion, quand l'utilisateur a été
+  /// redirigé ici depuis une page réservée aux membres.
+  final String? returnTo;
 
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
@@ -87,12 +94,26 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         );
       }
     } else {
-      await controller.signIn(
+      final ok = await controller.signIn(
         email: _emailCtrl.text,
         password: _passwordCtrl.text,
       );
-      // La navigation est gérée par la garde du router à l'ouverture de session.
+      if (!mounted || !ok) return;
+      // On quitte le mode invité et on revient à l'endroit exact d'où
+      // l'utilisateur a été redirigé (la garde du router vise la même cible).
+      await ref.read(guestModeProvider.notifier).disable();
+      if (!mounted) return;
+      // Toujours passer par le filtre anti-redirection ouverte : `returnTo`
+      // vient de l'URL et n'est donc pas digne de confiance.
+      context.go(AppRoutes.sanitizeReturnTo(widget.returnTo));
     }
+  }
+
+  /// Entre en mode invité : consultation libre, sans compte.
+  Future<void> _continueAsGuest() async {
+    await ref.read(guestModeProvider.notifier).enable();
+    if (!mounted) return;
+    context.go(AppRoutes.home);
   }
 
   Future<void> _forgotPassword() async {
@@ -138,139 +159,174 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 12),
-                    const Center(child: VibeoLogo(size: 58)),
-                    const SizedBox(height: 18),
-                    Text(
-                      'Bienvenue sur Vibeo',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Les clips de tes artistes préférés, vérifiés.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    _ModeToggle(mode: _mode, onChanged: _switchMode),
-                    const SizedBox(height: 22),
-                    if (_isSignUp) ...[
-                      TextFormField(
-                        controller: _usernameCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Nom d\'utilisateur',
-                          prefixIcon: Icon(Icons.alternate_email_rounded),
-                        ),
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const [AutofillHints.newUsername],
-                        validator: _validateUsername,
-                      ),
-                      const SizedBox(height: 14),
-                    ],
-                    TextFormField(
-                      controller: _emailCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.mail_outline_rounded),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      autofillHints: const [AutofillHints.email],
-                      validator: _validateEmail,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _passwordCtrl,
-                      decoration: InputDecoration(
-                        labelText: 'Mot de passe',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_rounded
-                                : Icons.visibility_off_rounded,
-                          ),
-                          tooltip: _obscure ? 'Afficher' : 'Masquer',
-                        ),
-                      ),
-                      obscureText: _obscure,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.password],
-                      onFieldSubmitted: (_) => _submit(),
-                      validator: _validatePassword,
-                    ),
-                    if (!_isSignUp) ...[
-                      const SizedBox(height: 6),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: loading ? null : _forgotPassword,
-                          child: const Text('Mot de passe oublié ?'),
-                        ),
-                      ),
-                    ] else
-                      const SizedBox(height: 20),
-                    const SizedBox(height: 14),
-                    GradientButton(
-                      label: _isSignUp ? 'Créer mon compte' : 'Se connecter',
-                      loading: loading,
-                      onPressed: loading ? null : _submit,
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
+        child: Stack(
+          children: [
+            // Bascule de thème accessible dès l'écran d'accueil de l'app.
+            const Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: EdgeInsets.only(right: 8),
+                child: ThemeToggleSwitch(),
+              ),
+            ),
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 26,
+                  vertical: 24,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Expanded(child: Divider()),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            'ou',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                        const SizedBox(height: 12),
+                        const Center(child: VibeoLogo(size: 58)),
+                        const SizedBox(height: 18),
+                        Text(
+                          'Bienvenue sur Vibeo',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Les clips de tes artistes préférés, vérifiés.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        _ModeToggle(mode: _mode, onChanged: _switchMode),
+                        const SizedBox(height: 22),
+                        if (_isSignUp) ...[
+                          TextFormField(
+                            controller: _usernameCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Nom d\'utilisateur',
+                              prefixIcon: Icon(Icons.alternate_email_rounded),
+                            ),
+                            textInputAction: TextInputAction.next,
+                            autofillHints: const [AutofillHints.newUsername],
+                            validator: _validateUsername,
+                          ),
+                          const SizedBox(height: 14),
+                        ],
+                        TextFormField(
+                          controller: _emailCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: Icon(Icons.mail_outline_rounded),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          validator: _validateEmail,
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _passwordCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Mot de passe',
+                            prefixIcon: const Icon(Icons.lock_outline_rounded),
+                            suffixIcon: IconButton(
+                              onPressed: () =>
+                                  setState(() => _obscure = !_obscure),
+                              icon: Icon(
+                                _obscure
+                                    ? Icons.visibility_rounded
+                                    : Icons.visibility_off_rounded,
+                              ),
+                              tooltip: _obscure ? 'Afficher' : 'Masquer',
                             ),
                           ),
+                          obscureText: _obscure,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.password],
+                          onFieldSubmitted: (_) => _submit(),
+                          validator: _validatePassword,
                         ),
-                        const Expanded(child: Divider()),
+                        if (!_isSignUp) ...[
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: loading ? null : _forgotPassword,
+                              child: const Text('Mot de passe oublié ?'),
+                            ),
+                          ),
+                        ] else
+                          const SizedBox(height: 20),
+                        const SizedBox(height: 14),
+                        GradientButton(
+                          label: _isSignUp
+                              ? 'Créer mon compte'
+                              : 'Se connecter',
+                          loading: loading,
+                          onPressed: loading ? null : _submit,
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            const Expanded(child: Divider()),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              child: Text(
+                                'ou',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                            const Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        GoogleButton(
+                          onPressed: loading
+                              ? null
+                              : () => ref
+                                    .read(authControllerProvider.notifier)
+                                    .signInWithGoogle(),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton.icon(
+                          onPressed: loading ? null : _continueAsGuest,
+                          icon: const Icon(Icons.explore_outlined, size: 20),
+                          label: const Text('Continuer en tant qu\'invité'),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Tu pourras regarder les clips librement. Un compte est '
+                          'nécessaire pour aimer, commenter ou t\'abonner.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'En continuant, tu acceptes nos Conditions d\'utilisation '
+                          'et notre Politique de confidentialité.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    GoogleButton(
-                      onPressed: loading
-                          ? null
-                          : () => ref
-                                .read(authControllerProvider.notifier)
-                                .signInWithGoogle(),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'En continuant, tu acceptes nos Conditions d\'utilisation '
-                      'et notre Politique de confidentialité.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

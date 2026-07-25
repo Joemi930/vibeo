@@ -1,4 +1,14 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Lecture audio en arrière-plan (mode audio du lecteur) : audio_service
+         démarre un service au premier plan pour continuer à jouer écran éteint
+         et afficher la notification média. INTERNET est requis par le
+         streaming Supabase, WAKE_LOCK pour ne pas être suspendu en lecture. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+
     <application
         android:label="vibeo"
         android:name="${applicationName}"
@@ -34,6 +44,29 @@
                 <data android:scheme="io.vibeo.app" android:host="login-callback"/>
             </intent-filter>
         </activity>
+        <!-- Service et récepteur exigés par audio_service : sans eux, la
+             lecture s'arrête dès que l'écran s'éteint et aucune notification
+             média n'apparaît. Le récepteur relaie les touches média
+             (casque, Bluetooth, écran de verrouillage). -->
+        <service
+            android:name="com.ryanheise.audioservice.AudioService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="true"
+            tools:ignore="Instantiatable">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService"/>
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name="com.ryanheise.audioservice.MediaButtonReceiver"
+            android:exported="true"
+            tools:ignore="Instantiatable">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON"/>
+            </intent-filter>
+        </receiver>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

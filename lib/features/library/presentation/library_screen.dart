@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/vibeo_app_bar.dart';
+
 /// Bibliothèque — squelette de Phase 1. Playlists, abonnements et historique
 /// arrivent en Phase 3.
 class LibraryScreen extends StatelessWidget {
@@ -9,7 +11,7 @@ class LibraryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Bibliothèque')),
+      appBar: const VibeoAppBar(title: 'Bibliothèque'),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),

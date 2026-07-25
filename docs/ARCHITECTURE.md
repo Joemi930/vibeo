@@ -38,7 +38,7 @@
 | Hébergement web | **Vercel** (build Flutter web) | Gratuit, CDN, headers sécurité |
 | Lecture vidéo | **video_player** + **chewie** | Streaming progressif MP4 |
 | Audio arrière-plan | **just_audio** + **audio_service** | Notification média, mode "YT Music" |
-| Compression vidéo | **ffmpeg_kit_flutter** (Android) | H.264 720p AVANT upload → budget 0 € |
+| Compression vidéo | **video_compress** (Android) | 720p AVANT upload → budget 0 € (voir note ci-dessous) |
 | IA | **Gemini API** (tier gratuit, multimodal) via Edge Functions | Vérif. artistes + carte d'identité + modération. Abstraction provider → bascule DeepSeek possible (texte uniquement) |
 | CI | **GitHub Actions** | analyze + tests + build à chaque push |
 
@@ -52,12 +52,29 @@ Le choix se fait par la variable d'env `AI_PROVIDER` (gemini | deepseek).
 Les clés API vivent UNIQUEMENT dans les secrets Edge Functions.
 
 ### Stratégie vidéo à 0 €
-1. Compression SUR L'APPAREIL (H.264, 720p max, ~2 Mbps, plafond 200 Mo / 8 min).
+1. Compression SUR L'APPAREIL (H.264/AAC, 720p max, plafond **60 Mo / 4 min**).
 2. Upload direct vers Supabase Storage (bucket privé `videos`) via URL signée.
 3. Miniature extraite sur l'appareil (frame à 10 %).
 4. Lecture en streaming progressif (range requests MP4) via URL signée 1 h.
 5. Limite tier gratuit (1 Go stockage / 2 Go bande passante par mois) affichée
    dans le dashboard admin ; migration Cloudflare R2 documentée si croissance.
+
+**Décision de Phase 2 — remplacement de `ffmpeg_kit_flutter`.** Le projet
+FFmpegKit a été officiellement retiré le 6 janvier 2025 et ses binaires
+supprimés de Maven Central le 1ᵉʳ avril 2025 : le paquet est inutilisable pour
+un nouveau build. Il est remplacé par **`video_compress`**, qui s'appuie sur
+les encodeurs natifs (MediaCodec sur Android, AVFoundation sur iOS) au lieu de
+binaires FFmpeg embarqués. Conséquences assumées : APK nettement plus léger et
+aucune contrainte de licence GPL, en échange d'un contrôle par préréglages de
+qualité plutôt que par bitrate exact. `ffmpeg_kit_flutter_new` (fork
+communautaire maintenu) reste le repli si un contrôle fin devient nécessaire.
+
+**Décision de Phase 2 — plafond ramené à 60 Mo / 4 min.** À 200 Mo par clip, le
+Go offert par le tier gratuit serait saturé en 5 vidéos. À 60 Mo — l'ordre de
+grandeur d'un clip musical de 3-4 min compressé en 720p — on tient une
+quinzaine de clips, de quoi démontrer plusieurs artistes et plusieurs genres.
+La valeur vit dans `lib/core/constants/media_limits.dart`, en miroir des
+contraintes SQL et des limites de bucket.
 
 ## 3. Base de données (Postgres — schéma cible)
 
@@ -153,6 +170,28 @@ de la carte d'identité** (photo/scan) → Edge Function `verify-artist` :
 8. **Client** : contenu utilisateur affiché en texte brut, jamais de HTML injecté.
 9. **CI** : analyze + tests bloquants, scan de secrets (gitleaks).
 10. **Revue** : agent security-reviewer sur chaque fonctionnalité sensible.
+
+### Limites connues et assumées (Phase 2)
+
+Deux écarts identifiés par l'audit de sécurité sont acceptés à ce stade et
+documentés ici pour ne pas être re-découverts comme des défauts :
+
+1. **Contenu public lu sans URL signée.** La règle §6.3 dit « accès uniquement
+   par URL signée ». Les buckets `avatars`, `videos` et `thumbnails` restent
+   bien privés (`public = false`), mais leurs politiques RLS autorisent le rôle
+   `anon` à lire les objets rattachés à du contenu *publié*. Un client peut donc
+   les lire via l'API Storage authentifiée par la clé publiable, sans générer
+   d'URL signée. C'est volontaire : ce contenu est public par nature, et le
+   filtrage reste assuré par la RLS. Les documents d'identité (§4), eux, ne
+   dérogent à rien : lecture admin uniquement, URL signée 5 min.
+
+2. **Intégrité du compteur de vues.** `record_view` est appelable par `anon`, et
+   l'anti-spam invité repose sur une `session_key` fournie par le client : un
+   script peut la faire tourner pour contourner la fenêtre de 30 minutes et
+   gonfler `view_count`. La règle des 10 secondes et la déduplication couvrent
+   l'usage normal, mais pas un abus délibéré. Durcissement prévu en Phase 4,
+   quand les Edge Functions existeront : jeton de lecture signé, à courte durée
+   de vie, lié à la vidéo et émis au démarrage de la lecture.
 
 ## 7. Maquette — écrans (Material 3, sobre, clair/sombre)
 

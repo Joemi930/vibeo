@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibeo/core/theme/app_theme.dart';
+import 'package:vibeo/core/theme/theme_mode_provider.dart';
 import 'package:vibeo/features/library/presentation/library_screen.dart';
 
 void main() {
@@ -11,8 +14,13 @@ void main() {
   });
 
   Future<void> pumpLibrary(WidgetTester tester, ThemeData theme) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
-      MaterialApp(theme: theme, home: const LibraryScreen()),
+      ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        child: MaterialApp(theme: theme, home: const LibraryScreen()),
+      ),
     );
     await tester.pump();
   }

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/domain/profile.dart';
+import '../../../auth/domain/user_role.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 
 /// Profil de l'utilisateur connecté (null si déconnecté ou introuvable).
@@ -9,6 +10,17 @@ final currentProfileProvider = FutureProvider<Profile?>((ref) async {
   if (user == null) return null;
   final repo = ref.watch(authRepositoryProvider);
   return repo.fetchProfile(user.id);
+});
+
+/// Rôle courant, lisible de façon **synchrone** (null tant que le profil n'est
+/// pas chargé).
+///
+/// La garde de [GoRouter] est synchrone et ne peut pas attendre un
+/// [FutureProvider] : elle s'appuie donc sur la dernière valeur connue. Ce
+/// garde-fou n'est qu'ergonomique — l'accès réel aux données reste protégé par
+/// la RLS Postgres (`videos_insert_own_artist` exige le rôle artiste).
+final currentRoleProvider = Provider<UserRole?>((ref) {
+  return ref.watch(currentProfileProvider).asData?.value?.role;
 });
 
 /// Résout une URL signée temporaire pour un chemin d'avatar du bucket privé.

@@ -28,8 +28,10 @@ Tu es l'architecte et le chef d'équipe, pas le développeur de base :
   Edge Functions (Deno/TypeScript)
 - **video_player + chewie** (lecture) · **just_audio + audio_service** (audio
   arrière-plan)
-- **ffmpeg_kit_flutter** : compression H.264 720p SUR L'APPAREIL avant upload
-  (jamais de transcodage serveur — budget 0 €)
+- **video_compress** : compression 720p SUR L'APPAREIL avant upload (encodeurs
+  natifs, jamais de transcodage serveur — budget 0 €). Remplace
+  `ffmpeg_kit_flutter`, retiré par ses auteurs en 2025 — voir
+  `docs/ARCHITECTURE.md` §2. Plafond : **60 Mo / 4 min** par clip.
 - **IA : Gemini API** (défaut, multimodal, tier gratuit) via le module
   `supabase/functions/_shared/ai-provider.ts` — abstraction permettant de
   basculer sur DeepSeek (`AI_PROVIDER=deepseek`, texte uniquement).
@@ -109,8 +111,10 @@ corrects ✚ audit sécurité passé si zone sensible.
 ## Pièges connus
 - Environnement : **Windows 11** — utiliser des commandes compatibles
   (les hooks tournent sous Git Bash).
-- `ffmpeg_kit_flutter` ne fonctionne pas sur le web : sur web, refuser les
-  fichiers > 200 Mo et uploader tel quel (publication surtout depuis Android).
+- `video_compress` ne fonctionne pas sur le web (il dépend de `dart:io`) : il
+  est isolé derrière un import conditionnel
+  (`lib/features/upload/data/video_compressor.dart`). Sur web, refuser les
+  fichiers > 60 Mo et uploader tel quel (publication surtout depuis Android).
 - `audio_service` nécessite une configuration AndroidManifest spécifique.
 - Tier gratuit Supabase : 1 Go de storage — afficher l'usage dans l'admin.
 - URLs signées Supabase sur web : configurer CORS du bucket.

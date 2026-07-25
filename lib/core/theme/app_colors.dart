@@ -74,6 +74,7 @@ class VibeoColors extends ThemeExtension<VibeoColors> {
     required this.warning,
     required this.warningContainer,
     required this.info,
+    required this.verified,
     required this.gradient,
   });
 
@@ -83,6 +84,10 @@ class VibeoColors extends ThemeExtension<VibeoColors> {
   final Color warning;
   final Color warningContainer;
   final Color info;
+
+  /// Couleur de l'insigne « artiste vérifié » (variante de la primaire).
+  /// En clair, le design system fusionne cette variante avec la primaire.
+  final Color verified;
   final LinearGradient gradient;
 
   static const VibeoColors dark = VibeoColors(
@@ -92,6 +97,7 @@ class VibeoColors extends ThemeExtension<VibeoColors> {
     warning: AppColors.dWarning,
     warningContainer: AppColors.dWarningBg,
     info: AppColors.dInfo,
+    verified: AppColors.dPrimaryVariant,
     gradient: AppColors.signatureGradient,
   );
 
@@ -102,6 +108,7 @@ class VibeoColors extends ThemeExtension<VibeoColors> {
     warning: AppColors.lWarning,
     warningContainer: AppColors.lWarningBg,
     info: AppColors.lInfo,
+    verified: AppColors.lPrimary,
     gradient: AppColors.signatureGradient,
   );
 
@@ -117,6 +124,7 @@ class VibeoColors extends ThemeExtension<VibeoColors> {
     Color? warning,
     Color? warningContainer,
     Color? info,
+    Color? verified,
     LinearGradient? gradient,
   }) {
     return VibeoColors(
@@ -126,6 +134,7 @@ class VibeoColors extends ThemeExtension<VibeoColors> {
       warning: warning ?? this.warning,
       warningContainer: warningContainer ?? this.warningContainer,
       info: info ?? this.info,
+      verified: verified ?? this.verified,
       gradient: gradient ?? this.gradient,
     );
   }
@@ -152,6 +161,7 @@ class VibeoColors extends ThemeExtension<VibeoColors> {
         t,
       )!,
       info: Color.lerp(info, other.info, t)!,
+      verified: Color.lerp(verified, other.verified, t)!,
       gradient: LinearGradient.lerp(gradient, other.gradient, t)!,
     );
   }

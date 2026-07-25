@@ -45,18 +45,26 @@ declare
   n_bob      int;
   n_updated  int;
 begin
-  -- 1) Alice ne voit QUE sa propre ligne.
+  -- 1) Depuis la Phase 2, les profils sont PUBLICS en lecture : afficher le
+  --    nom d'un artiste sous un clip ou l'auteur d'un commentaire l'impose.
+  --    Alice voit donc aussi Bob. Ce qui compte désormais, c'est que la
+  --    lecture publique ne s'accompagne d'AUCUN droit d'écriture (points 3-4)
+  --    et qu'aucune donnée sensible ne vive dans cette table (email et
+  --    téléphone restent dans auth.users, jamais exposée).
   select count(*) into n_total from public.profiles;
-  if n_total <> 1 then
-    raise exception 'ÉCHEC : Alice voit % profils (attendu 1).', n_total;
+  if n_total < 2 then
+    raise exception
+      'ÉCHEC : Alice voit % profils (au moins 2 attendus, lecture publique).',
+      n_total;
   end if;
 
-  -- 2) Alice ne peut pas lire le profil de Bob.
+  -- 2) Alice PEUT lire le profil de Bob (lecture publique assumée).
   select count(*) into n_bob
   from public.profiles
   where id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-  if n_bob <> 0 then
-    raise exception 'ÉCHEC : Alice lit le profil de Bob (% lignes).', n_bob;
+  if n_bob <> 1 then
+    raise exception
+      'ÉCHEC : Alice ne lit pas le profil public de Bob (% lignes).', n_bob;
   end if;
 
   -- 3) Alice ne peut pas modifier le profil de Bob (0 ligne affectée par RLS).
@@ -77,7 +85,19 @@ begin
     raise exception 'ÉCHEC : Alice ne peut pas modifier son propre profil.';
   end if;
 
-  raise notice '✅ SUCCÈS : isolation RLS des profils vérifiée (lecture + écriture).';
+  -- 5) Le compteur d'abonnés n'est pas modifiable par le client, même sur sa
+  --    propre ligne (règle n°6 : les compteurs passent par des triggers).
+  update public.profiles
+     set subscriber_count = 999999
+   where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  if (
+    select subscriber_count from public.profiles
+     where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+  ) <> 0 then
+    raise exception 'ÉCHEC : Alice a gonflé son compteur d''abonnés.';
+  end if;
+
+  raise notice '✅ SUCCÈS : RLS des profils vérifiée (lecture publique, écriture isolée, compteurs verrouillés).';
 end $$;
 
 -- --- Vérifie aussi l'anti-escalade de rôle ---

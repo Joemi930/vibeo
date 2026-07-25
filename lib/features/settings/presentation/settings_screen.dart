@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_routes.dart';
 import '../../../core/theme/theme_mode_provider.dart';
+import '../../../core/widgets/vibeo_app_bar.dart';
 import '../../auth/presentation/providers/auth_controller.dart';
+import '../../auth/presentation/providers/guest_mode_provider.dart';
 
 /// Écran Paramètres : apparence (thème), compte, déconnexion, zone de danger.
 /// Fidèle à `Maquettes/Settings.dc.html`.
@@ -17,7 +19,7 @@ class SettingsScreen extends ConsumerWidget {
     final mode = ref.watch(themeModeProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Paramètres')),
+      appBar: const VibeoAppBar(title: 'Paramètres'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
@@ -119,6 +121,9 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
     if (confirm == true) {
+      // On efface aussi le mode invité : sans ça, la déconnexion renverrait
+      // vers l'accueil en consultation libre au lieu de l'écran de connexion.
+      await ref.read(guestModeProvider.notifier).disable();
       await ref.read(authControllerProvider.notifier).signOut();
     }
   }

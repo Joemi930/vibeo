@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibeo/core/theme/app_theme.dart';
+import 'package:vibeo/core/theme/theme_mode_provider.dart';
 import 'package:vibeo/features/auth/domain/profile.dart';
 import 'package:vibeo/features/auth/domain/user_role.dart';
 import 'package:vibeo/features/auth/presentation/providers/auth_providers.dart';
@@ -36,6 +38,8 @@ void main() {
   }) async {
     final repo = FakeAuthRepository();
     addTearDown(repo.dispose);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
       // Désactive le retry automatique de Riverpod pour que l'état d'erreur
       // se stabilise immédiatement dans les tests (sinon il reste en
@@ -43,6 +47,7 @@ void main() {
       retry: (retryCount, error) => null,
       overrides: [
         authRepositoryProvider.overrideWithValue(repo),
+        sharedPreferencesProvider.overrideWithValue(prefs),
         if (useError)
           currentProfileProvider.overrideWith(
             (ref) => Future<Profile?>.error(Exception('boom')),
@@ -121,9 +126,12 @@ void main() {
   ) async {
     final repo = FakeAuthRepository();
     addTearDown(repo.dispose);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
       overrides: [
         authRepositoryProvider.overrideWithValue(repo),
+        sharedPreferencesProvider.overrideWithValue(prefs),
         currentProfileProvider.overrideWith(
           (ref) => Completer<Profile?>().future,
         ),
@@ -165,4 +173,32 @@ void main() {
     expect(find.widgetWithText(TextFormField, 'Bio'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'un profil artiste affiche l\'insigne vérifié et « Ouvrir le Studio »',
+    (tester) async {
+      final artistProfile = baseProfile.copyWith(role: UserRole.artist);
+
+      await pumpProfile(tester, AppTheme.dark, profile: artistProfile);
+
+      // L'insigne apparaît deux fois : à côté du nom (VerifiedBadge) et dans
+      // le badge de rôle (_RoleBadge), qui partagent la même icône.
+      expect(find.byIcon(Icons.verified_rounded), findsNWidgets(2));
+      expect(find.text('Ouvrir le Studio'), findsOneWidget);
+      expect(find.text('Devenir artiste'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'un profil auditeur n\'affiche pas d\'insigne et propose « Devenir artiste »',
+    (tester) async {
+      await pumpProfile(tester, AppTheme.dark, profile: baseProfile);
+
+      expect(find.byIcon(Icons.verified_rounded), findsNothing);
+      expect(find.text('Devenir artiste'), findsOneWidget);
+      expect(find.text('Ouvrir le Studio'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
