@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:vibeo/features/library/data/playlist_repository.dart';
 import 'package:vibeo/features/library/domain/playlist.dart';
 import 'package:vibeo/features/video/domain/video.dart';
@@ -12,6 +14,7 @@ class FakePlaylistRepository implements PlaylistRepository {
     List<Video> history = const [],
     this.throwOnFetch = false,
     this.throwOnWrite = false,
+    this.throwOnCoverUpload = false,
   }) : playlists = [...playlists],
        items = {
          for (final e in items.entries) e.key: [...e.value],
@@ -23,6 +26,10 @@ class FakePlaylistRepository implements PlaylistRepository {
   List<Video> history;
   bool throwOnFetch;
   bool throwOnWrite;
+
+  /// Échec isolé du téléversement de couverture, sans affecter les autres
+  /// écritures : permet de tester le cas « playlist créée, image en échec ».
+  bool throwOnCoverUpload;
 
   /// Trace des appels, pour les assertions.
   final List<String> calls = [];
@@ -77,6 +84,8 @@ class FakePlaylistRepository implements PlaylistRepository {
     String? title,
     String? description,
     bool? isPublic,
+    String? coverPath,
+    bool clearCover = false,
   }) async {
     calls.add('update:$playlistId');
     if (throwOnWrite) throw const PlaylistException('Échec simulé.');
@@ -85,6 +94,8 @@ class FakePlaylistRepository implements PlaylistRepository {
       title: title,
       description: description,
       isPublic: isPublic,
+      coverPath: coverPath,
+      clearCover: clearCover,
     );
     playlists = [...playlists]..[index] = updated;
     return updated;
@@ -95,6 +106,33 @@ class FakePlaylistRepository implements PlaylistRepository {
     calls.add('delete:$playlistId');
     if (throwOnWrite) throw const PlaylistException('Échec simulé.');
     playlists = playlists.where((p) => p.id != playlistId).toList();
+  }
+
+  @override
+  Future<String> uploadCover({
+    required String userId,
+    required String playlistId,
+    required Uint8List bytes,
+    required String fileExtension,
+    required String contentType,
+  }) async {
+    calls.add('uploadCover:$playlistId');
+    if (throwOnWrite || throwOnCoverUpload) {
+      throw const PlaylistException('Échec simulé.');
+    }
+    return '$userId/$playlistId.$fileExtension';
+  }
+
+  @override
+  Future<void> removeCoverFile(String storagePath) async {
+    calls.add('removeCoverFile:$storagePath');
+  }
+
+  @override
+  Future<String?> signedCoverUrl(String? storagePath) async {
+    calls.add('signedCoverUrl:$storagePath');
+    if (storagePath == null || storagePath.isEmpty) return null;
+    return 'https://example.test/$storagePath';
   }
 
   @override

@@ -70,9 +70,12 @@ final thumbnailUrlProvider = FutureProvider.family<String?, String?>((
   return ref.watch(videoRepositoryProvider).signedThumbnailUrl(path);
 });
 
-/// URL signée du fichier vidéo, pour la lecture en streaming.
-final videoUrlProvider = FutureProvider.family<String?, String?>((ref, path) {
-  return ref.watch(videoRepositoryProvider).signedVideoUrl(path);
+/// Colonne « À suivre » du lecteur : clips suggérés après celui en cours.
+final suggestedVideosProvider = FutureProvider.family<List<Video>, String>((
+  ref,
+  videoId,
+) {
+  return ref.watch(videoRepositoryProvider).fetchSuggested(videoId);
 });
 
 /// Clé de session opaque servant à dédupliquer les vues des invités.

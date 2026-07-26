@@ -18,20 +18,32 @@ class PickedThumbnail {
   final String contentType;
 }
 
-/// Ouvre la galerie pour choisir une miniature personnalisée.
+/// Ouvre la galerie pour choisir une image (miniature de clip, avatar,
+/// bannière de profil…).
 ///
 /// `image_picker` fonctionne aussi bien sur Android que sur le web : une seule
 /// implémentation suffit ici, contrairement à la sélection de clip.
 ///
+/// [maxWidth] et [maxBytes] sont paramétrables pour que chaque appelant
+/// applique le plafond qui lui correspond (une miniature de clip, un avatar et
+/// une bannière n'ont pas les mêmes contraintes) sans dupliquer la logique de
+/// détection du type MIME et de vérification de taille — c'est cette
+/// duplication qui, avant, faisait deviner le type (un `.gif` partait par
+/// exemple en `image/jpeg`) et sautait la vérification de taille côté
+/// `profile_screen.dart`.
+///
 /// Renvoie `null` si l'utilisateur annule. Lève [PickerException] si l'image
 /// dépasse le plafond ou n'est pas d'un type accepté — les mêmes règles que
 /// celles appliquées par le bucket Storage.
-Future<PickedThumbnail?> pickThumbnailImage() async {
+Future<PickedThumbnail?> pickThumbnailImage({
+  double maxWidth = 1920,
+  int maxBytes = MediaLimits.maxThumbnailBytes,
+}) async {
   final file = await ImagePicker().pickImage(
     source: ImageSource.gallery,
     // Ignoré sur le web, appliqué sur Android : évite d'envoyer une photo de
     // 12 Mpx pour une vignette.
-    maxWidth: 1920,
+    maxWidth: maxWidth,
     imageQuality: 85,
   );
   if (file == null) return null;
@@ -43,11 +55,10 @@ Future<PickedThumbnail?> pickThumbnailImage() async {
   }
 
   final bytes = await file.readAsBytes();
-  if (bytes.length > MediaLimits.maxThumbnailBytes) {
+  if (bytes.length > maxBytes) {
     throw PickerException(
       'Cette image pèse ${MediaLimits.formatBytes(bytes.length)}. '
-      'La limite est de '
-      '${MediaLimits.formatBytes(MediaLimits.maxThumbnailBytes)}.',
+      'La limite est de ${MediaLimits.formatBytes(maxBytes)}.',
     );
   }
 

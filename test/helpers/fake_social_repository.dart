@@ -71,16 +71,29 @@ class FakeSocialRepository implements SocialRepository {
   }) async {
     calls.add('fetchComments:$videoId:$limit:$offset');
     if (throwOnFetch) throw Exception('échec réseau simulé');
-    final matching = comments.where((c) => c.videoId == videoId).toList();
-    if (offset >= matching.length) return const [];
-    final end = (offset + limit).clamp(0, matching.length);
-    return matching.sublist(offset, end);
+    // Même contrat que SupabaseSocialRepository : pagination sur les
+    // commentaires racine, réponses rattachées ensuite sans pagination.
+    final roots = comments
+        .where((c) => c.videoId == videoId && !c.isReply)
+        .toList();
+    if (offset >= roots.length) return const [];
+    final end = (offset + limit).clamp(0, roots.length);
+    final page = roots.sublist(offset, end);
+
+    return page
+        .map(
+          (root) => root.copyWith(
+            replies: comments.where((c) => c.parentId == root.id).toList(),
+          ),
+        )
+        .toList();
   }
 
   @override
   Future<Comment> addComment({
     required String videoId,
     required String body,
+    String? parentId,
   }) async {
     calls.add('addComment:$videoId');
     if (throwOnAddComment != null) throw throwOnAddComment!;
@@ -90,6 +103,7 @@ class FakeSocialRepository implements SocialRepository {
       authorId: 'user-1',
       body: body,
       createdAt: DateTime(2026, 7, 25),
+      parentId: parentId,
     );
     comments = [comment, ...comments];
     return comment;

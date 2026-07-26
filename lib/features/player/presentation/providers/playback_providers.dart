@@ -26,6 +26,8 @@ class PlaybackState {
     this.position = Duration.zero,
     this.duration = Duration.zero,
     this.errorMessage,
+    this.technicalDetail,
+    this.needsUnmute = false,
   });
 
   final Video? video;
@@ -35,6 +37,19 @@ class PlaybackState {
   final Duration position;
   final Duration duration;
   final String? errorMessage;
+
+  /// Cause technique brute, affichée sous « Détails techniques ».
+  ///
+  /// Séparée de [errorMessage] parce qu'elle doit rester lisible **en release** :
+  /// sans elle, une panne de lecture chez un utilisateur est indiagnosticable
+  /// (`kDebugMode` est faux dans le build servi). Ne contient jamais d'URL
+  /// signée ni de jeton — uniquement le code et le message du lecteur.
+  final String? technicalDetail;
+
+  /// Le navigateur a refusé le son : la lecture continue en muet et l'interface
+  /// propose de le réactiver d'un clic — ce clic étant précisément le geste
+  /// utilisateur qui lève le blocage.
+  final bool needsUnmute;
 
   bool get hasMedia => video != null;
   bool get isAudioMode => mode == PlaybackMode.audio;
@@ -53,6 +68,8 @@ class PlaybackState {
     Duration? position,
     Duration? duration,
     String? errorMessage,
+    String? technicalDetail,
+    bool? needsUnmute,
     bool clearError = false,
     bool clearVideo = false,
   }) {
@@ -64,6 +81,10 @@ class PlaybackState {
       position: position ?? this.position,
       duration: duration ?? this.duration,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      technicalDetail: clearError
+          ? null
+          : (technicalDetail ?? this.technicalDetail),
+      needsUnmute: needsUnmute ?? this.needsUnmute,
     );
   }
 }
@@ -133,6 +154,7 @@ class PlaybackController extends Notifier<PlaybackState> {
       state = state.copyWith(
         isLoading: false,
         errorMessage: _readableError(error.toString()),
+        technicalDetail: error.toString(),
       );
     }
   }
@@ -142,18 +164,31 @@ class PlaybackController extends Notifier<PlaybackState> {
     _videoController = controller;
     await controller.initialize();
     if (from > Duration.zero) await controller.seekTo(from);
-    controller.addListener(_onVideoTick);
 
-    // Les navigateurs refusent de démarrer une vidéo avec du son sans geste
-    // direct de l'utilisateur. Le `play()` n'échoue pas toujours par exception :
-    // il peut aussi être ignoré silencieusement. On lit donc l'état réel du
-    // contrôleur plutôt que de supposer que la lecture a démarré — sinon le
-    // bouton affiche « pause » alors que rien ne bouge.
-    try {
+    // On tente d'abord avec le son, comme demandé. Si le navigateur refuse, on
+    // rebascule en muet juste en dessous : la lecture muette, elle, est
+    // toujours autorisée.
+    //
+    // Attention au piège : sur le web, `play()` **ne lève pas** d'exception en
+    // cas de refus. `video_player_web` intercepte la `DOMException` et la
+    // pousse dans le flux d'erreurs du lecteur, où `video_player` la
+    // transforme en `VideoPlayerValue.erroneous(...)` — ce qui remet
+    // `isInitialized` à faux et fait passer un simple refus de politique
+    // navigateur pour une panne de lecture. C'est exactement ce qui affichait
+    // « Lecture impossible. Vérifie ta connexion. » sur un clip parfaitement
+    // sain. Un `try/catch` autour de `play()` n'attrape donc rien : il faut
+    // inspecter l'état du contrôleur après coup.
+    await controller.play();
+    final refused = _isAutoplayRefusal(controller.value);
+    if (refused) {
+      await controller.setVolume(0);
       await controller.play();
-    } catch (error) {
-      logError('démarrage automatique refusé', error);
     }
+
+    // Le listener n'est branché qu'ici, après le rattrapage du refus : posé
+    // avant, il aurait publié l'erreur d'autoplay dans l'état avant qu'on ait
+    // eu la chance de la corriger.
+    controller.addListener(_onVideoTick);
 
     state = state.copyWith(
       mode: PlaybackMode.video,
@@ -161,8 +196,53 @@ class PlaybackController extends Notifier<PlaybackState> {
       isPlaying: controller.value.isPlaying,
       duration: controller.value.duration,
       position: from,
+      needsUnmute: refused,
       clearError: true,
     );
+  }
+
+  /// Relance la lecture en muet après un refus survenu en cours de route.
+  Future<void> _recoverFromAutoplayRefusal() async {
+    final controller = _videoController;
+    if (controller == null) return;
+    await controller.setVolume(0);
+    await controller.play();
+    state = state.copyWith(
+      isLoading: false,
+      isPlaying: controller.value.isPlaying,
+      needsUnmute: true,
+      clearError: true,
+    );
+  }
+
+  /// Rétablit le son après un démarrage muet forcé par le navigateur.
+  ///
+  /// Appelée depuis un vrai clic : c'est ce geste qui autorise enfin le son.
+  Future<void> unmute() async {
+    final controller = _videoController;
+    if (controller == null) return;
+    await controller.setVolume(1);
+    if (!controller.value.isPlaying) await controller.play();
+    state = state.copyWith(needsUnmute: false, clearError: true);
+  }
+
+  /// Vrai si l'erreur portée par le lecteur n'est qu'un refus de démarrage.
+  ///
+  /// Les navigateurs bloquent la lecture automatique **avec son** tant que
+  /// l'utilisateur n'a pas interagi avec la page (`NotAllowedError`), et
+  /// annulent une lecture interrompue par un nouveau chargement
+  /// (`AbortError`). Ni l'un ni l'autre n'est une panne : les confondre avec
+  /// une erreur de flux est ce qui bloquait toute lecture.
+  static bool _isAutoplayRefusal(VideoPlayerValue value) {
+    if (!value.hasError) return false;
+    final raw = (value.errorDescription ?? '').toLowerCase();
+    return raw.contains('notallowed') ||
+        raw.contains('not allowed') ||
+        raw.contains("didn't interact") ||
+        raw.contains('did not interact') ||
+        raw.contains('user agent') ||
+        raw.contains('aborterror') ||
+        raw.contains('abort');
   }
 
   void _onVideoTick() {
@@ -175,11 +255,21 @@ class PlaybackController extends Notifier<PlaybackState> {
     // lecteur restait figé sur un écran noir sans explication.
     if (value.hasError) {
       final description = value.errorDescription ?? '';
+
+      // Un refus de démarrage n'est pas une panne : on repasse en muet et on
+      // laisse l'utilisateur rétablir le son. Sans cette porte de sortie, tout
+      // clip sain s'affichait comme illisible.
+      if (_isAutoplayRefusal(value)) {
+        unawaited(_recoverFromAutoplayRefusal());
+        return;
+      }
+
       logError('erreur de lecture', description);
       state = state.copyWith(
         isLoading: false,
         isPlaying: false,
         errorMessage: _readableError(description),
+        technicalDetail: description.isEmpty ? null : description,
       );
       return;
     }
@@ -200,20 +290,26 @@ class PlaybackController extends Notifier<PlaybackState> {
   /// 4 (`MEDIA_ELEMENT_ERROR: Format error`) signifie que le fichier arrive bien
   /// mais que le décodeur refuse ses codecs — un cas radicalement différent
   /// d'une coupure réseau, et qu'il ne sert à rien de « réessayer ».
+  ///
+  /// Limite connue et assumée : depuis `_onVideoTick`, cette fonction ne reçoit
+  /// que `MediaError.message`, car `video_player` jette le code et les détails
+  /// en construisant `VideoPlayerValue.erroneous`. Le classement y est donc
+  /// approximatif — c'est précisément pourquoi la cause brute est désormais
+  /// conservée dans `technicalDetail` et affichée à la demande, y compris en
+  /// release. Ne jamais conclure « problème de réseau » sur ce seul message.
   static String _readableError(String raw) {
     final lower = raw.toLowerCase();
     final isFormat =
         lower.contains('format') ||
         lower.contains('src_not_supported') ||
         lower.contains('not supported') ||
-        lower.contains('decode');
+        lower.contains('decode') ||
+        lower.contains('demuxer');
 
-    final message = isFormat
-        ? 'Ce clip utilise un format vidéo que ce navigateur ne sait pas lire.'
-        : 'Lecture impossible. Vérifie ta connexion.';
-
-    if (!kDebugMode || raw.isEmpty) return message;
-    return '$message\n\n[debug] $raw';
+    if (isFormat) {
+      return 'Ce clip utilise un format vidéo que ce navigateur ne sait pas lire.';
+    }
+    return 'La lecture n\'a pas pu démarrer. Réessaie dans un instant.';
   }
 
   /// Comptabilise la vue une fois le seuil de lecture franchi.
@@ -276,8 +372,9 @@ class PlaybackController extends Notifier<PlaybackState> {
   /// notification système — le navigateur ne le permet pas.
   Future<void> switchToAudio() async {
     final video = state.video;
-    final url = _signedUrl;
-    if (video == null || url == null || state.isAudioMode) return;
+    if (video == null || state.isAudioMode) return;
+    final url = await _freshSignedUrl(video);
+    if (url == null) return;
 
     final from = state.position;
     state = state.copyWith(isLoading: true);
@@ -320,13 +417,34 @@ class PlaybackController extends Notifier<PlaybackState> {
 
   /// Revient à la lecture vidéo, à la position atteinte en audio.
   Future<void> switchToVideo() async {
-    final url = _signedUrl;
-    if (url == null || !state.isAudioMode) return;
+    final video = state.video;
+    if (video == null || !state.isAudioMode) return;
+    final url = await _freshSignedUrl(video);
+    if (url == null) return;
 
     final from = state.position;
     state = state.copyWith(isLoading: true);
     await _stopAudio();
     await _startVideo(url, from);
+  }
+
+  /// URL signée valide pour ce clip, re-signée à chaque changement de mode.
+  ///
+  /// Les URLs signées expirent au bout d'une heure. Réutiliser celle obtenue à
+  /// l'ouverture faisait échouer le passage en mode audio sur une lecture un
+  /// peu longue, avec un message accusant à tort l'appareil. La signature est
+  /// une simple requête, autant la refaire ; en cas d'échec on retombe sur
+  /// l'URL en cache, qui peut encore être valide.
+  Future<String?> _freshSignedUrl(Video video) async {
+    try {
+      final url = await ref
+          .read(videoRepositoryProvider)
+          .signedVideoUrl(video.videoPath);
+      if (url != null) _signedUrl = url;
+    } catch (error) {
+      logError('re-signature de l\'URL impossible', error);
+    }
+    return _signedUrl;
   }
 
   /// Ferme le lecteur (croix du mini-player) et libère toutes les ressources.

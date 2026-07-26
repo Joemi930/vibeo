@@ -50,6 +50,15 @@ void main() {
       expect(Playlist.fromJson(json).updatedAt, isNull);
     });
 
+    test('lit cover_path quand présent', () {
+      final json = {...validJson, 'cover_path': 'user-1/playlist-1.jpg'};
+      expect(Playlist.fromJson(json).coverPath, 'user-1/playlist-1.jpg');
+    });
+
+    test('coverPath est null par défaut', () {
+      expect(Playlist.fromJson(validJson).coverPath, isNull);
+    });
+
     for (final field in ['id', 'owner_id', 'title', 'created_at']) {
       test('lève FormatException si "$field" est absent', () {
         final json = {...validJson}..remove(field);
@@ -80,6 +89,7 @@ void main() {
         'item_count': 42,
         'is_public': true,
         'description': 'Une description',
+        'cover_path': 'user-1/playlist-1.jpg',
       });
 
       expect(playlist.toJson(), {
@@ -87,6 +97,7 @@ void main() {
         'title': 'Nuit & basse',
         'description': 'Une description',
         'is_public': true,
+        'cover_path': 'user-1/playlist-1.jpg',
       });
     });
   });
@@ -97,6 +108,7 @@ void main() {
       'description': 'Description initiale',
       'is_public': false,
       'item_count': 5,
+      'cover_path': 'user-1/playlist-1.jpg',
     });
 
     test('remplace le titre, la description et la visibilité', () {
@@ -112,6 +124,7 @@ void main() {
       // Inchangés.
       expect(updated.id, playlist.id);
       expect(updated.itemCount, playlist.itemCount);
+      expect(updated.coverPath, playlist.coverPath);
     });
 
     test('sans argument, préserve tous les champs', () {
@@ -134,6 +147,22 @@ void main() {
       () {
         final updated = playlist.copyWith(itemCount: 9);
         expect(updated.itemCount, 9);
+      },
+    );
+
+    test('remplace coverPath', () {
+      final updated = playlist.copyWith(coverPath: 'user-1/playlist-1.png');
+      expect(updated.coverPath, 'user-1/playlist-1.png');
+    });
+
+    test(
+      'clearCover efface la couverture même si un nouveau chemin est fourni',
+      () {
+        final cleared = playlist.copyWith(
+          coverPath: 'ignoré.png',
+          clearCover: true,
+        );
+        expect(cleared.coverPath, isNull);
       },
     );
   });

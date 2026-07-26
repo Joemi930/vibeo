@@ -81,8 +81,8 @@ class SettingsScreen extends ConsumerWidget {
                 const Divider(height: 1),
                 _AccountTile(
                   icon: Icons.lock_rounded,
-                  label: 'Confidentialité',
-                  enabled: false,
+                  label: 'Compte et confidentialité',
+                  onTap: () => context.push(AppRoutes.accountPrivacy),
                 ),
               ],
             ),
@@ -295,6 +295,8 @@ class _AccountTile extends StatelessWidget {
 }
 
 class _DangerZone extends StatelessWidget {
+  const _DangerZone();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -323,15 +325,7 @@ class _DangerZone extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           OutlinedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'La suppression de compte arrivera prochainement.',
-                  ),
-                ),
-              );
-            },
+            onPressed: () => context.push(AppRoutes.accountPrivacy),
             style: OutlinedButton.styleFrom(
               foregroundColor: error,
               side: BorderSide(color: error),

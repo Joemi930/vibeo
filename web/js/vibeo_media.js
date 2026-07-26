@@ -139,8 +139,14 @@
       // Les encodeurs H.264 exigent des dimensions paires.
       if (targetHeight % 2 !== 0) targetHeight -= 1;
 
+      // `fastStart: 'in-memory'` place l'index du fichier (l'atome `moov`) au
+      // DÉBUT au lieu de la fin. Sans lui, un navigateur qui lit le clip depuis
+      // une URL doit d'abord aller chercher la fin du fichier avant de pouvoir
+      // afficher la moindre image, ce qui rend la lecture progressive fragile.
+      // La sortie étant déjà assemblée en mémoire (`BufferTarget`), cette
+      // option ne coûte rien de plus.
       var output = new MB.Output({
-        format: new MB.Mp4OutputFormat(),
+        format: new MB.Mp4OutputFormat({ fastStart: 'in-memory' }),
         target: new MB.BufferTarget(),
       });
 

@@ -16,6 +16,7 @@ import '../../features/player/presentation/player_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/providers/profile_providers.dart';
 import '../../features/search/presentation/search_screen.dart';
+import '../../features/settings/presentation/account_privacy_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/studio/presentation/edit_video_screen.dart';
 import '../../features/studio/presentation/studio_screen.dart';
@@ -146,6 +147,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
+        path: AppRoutes.accountPrivacy,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AccountPrivacyScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.studio,
         builder: (context, state) => const StudioScreen(),
       ),
@@ -166,8 +172,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             PlayerScreen(videoId: state.pathParameters['videoId']!),
       ),
       GoRoute(
-        path: AppRoutes.audio,
-        builder: (context, state) => const AudioModeScreen(),
+        path: AppRoutes.audioPattern,
+        builder: (context, state) =>
+            AudioModeScreen(videoId: state.pathParameters['videoId']!),
       ),
       // Page publique d'un artiste — aussi accessible sans compte (RLS).
       GoRoute(

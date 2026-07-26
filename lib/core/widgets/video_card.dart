@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../features/video/domain/video.dart';
 import '../../features/video/presentation/providers/video_providers.dart';
 import '../constants/media_limits.dart';
+import '../router/app_routes.dart';
 import '../utils/format_utils.dart';
 import 'verified_badge.dart';
 
@@ -146,11 +148,15 @@ class _VideoMeta extends StatelessWidget {
       children: [
         if (artist != null)
           Flexible(
-            child: ArtistNameLabel(
-              name: artist.resolvedName,
-              isVerified: artist.isVerified,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: () => context.push(AppRoutes.artist(artist.id)),
+              child: ArtistNameLabel(
+                name: artist.resolvedName,
+                isVerified: artist.isVerified,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),

@@ -32,7 +32,16 @@ class CommentsSectionState extends ConsumerState<CommentsSection> {
   final _bodyController = TextEditingController();
   final _inputFocusNode = FocusNode();
   final _scrollController = ScrollController();
+  final _replyController = TextEditingController();
   bool _sending = false;
+  bool _sendingReply = false;
+
+  /// Id du commentaire racine dont le champ de réponse est ouvert, ou `null`.
+  /// Un seul champ de réponse ouvert à la fois.
+  String? _replyingToId;
+
+  /// Racines dont les réponses sont dépliées.
+  Set<String> _expandedReplies = {};
 
   @override
   void initState() {
@@ -46,6 +55,7 @@ class CommentsSectionState extends ConsumerState<CommentsSection> {
     _scrollController.dispose();
     _bodyController.dispose();
     _inputFocusNode.dispose();
+    _replyController.dispose();
     super.dispose();
   }
 
@@ -95,6 +105,57 @@ class CommentsSectionState extends ConsumerState<CommentsSection> {
       messenger.showSnackBar(SnackBar(content: Text(error)));
     } else {
       _bodyController.clear();
+    }
+  }
+
+  void _startReply(String rootId) {
+    _replyController.clear();
+    setState(() => _replyingToId = rootId);
+  }
+
+  void _cancelReply() {
+    _replyController.clear();
+    setState(() => _replyingToId = null);
+  }
+
+  void _toggleExpandReplies(String rootId) {
+    setState(() {
+      _expandedReplies = {..._expandedReplies};
+      if (!_expandedReplies.add(rootId)) {
+        _expandedReplies.remove(rootId);
+      }
+    });
+  }
+
+  /// Envoie une réponse à un commentaire racine — profondeur 1 max, garantie
+  /// côté serveur (le bouton « Répondre » n'est de toute façon jamais proposé
+  /// sur une réponse, voir `_CommentTile`).
+  Future<void> _sendReply(String rootId) async {
+    final body = _replyController.text.trim();
+    if (body.isEmpty || _sendingReply) return;
+
+    // Même garde que `_send` : le champ de réponse reste accessible à un
+    // invité qui aurait fait défiler jusqu'ici.
+    if (!await requireAuth(context, ref, gate: AuthGate.comment)) return;
+    if (!mounted) return;
+
+    setState(() => _sendingReply = true);
+
+    final messenger = ScaffoldMessenger.of(context);
+    final error = await ref
+        .read(commentsControllerProvider(widget.videoId).notifier)
+        .add(body, parentId: rootId);
+
+    if (!mounted) return;
+    setState(() => _sendingReply = false);
+    if (error != null) {
+      messenger.showSnackBar(SnackBar(content: Text(error)));
+    } else {
+      _replyController.clear();
+      setState(() {
+        _replyingToId = null;
+        _expandedReplies = {..._expandedReplies, rootId};
+      });
     }
   }
 
@@ -174,6 +235,14 @@ class CommentsSectionState extends ConsumerState<CommentsSection> {
               currentProfileId: currentProfileId,
               onDelete: _confirmDelete,
               onReport: _report,
+              expandedReplies: _expandedReplies,
+              replyingToId: _replyingToId,
+              replyController: _replyController,
+              sendingReply: _sendingReply,
+              onToggleExpand: _toggleExpandReplies,
+              onStartReply: _startReply,
+              onCancelReply: _cancelReply,
+              onSendReply: _sendReply,
             ),
           ),
           const SizedBox(height: 14),
@@ -195,12 +264,28 @@ class _CommentsList extends StatelessWidget {
     required this.currentProfileId,
     required this.onDelete,
     required this.onReport,
+    required this.expandedReplies,
+    required this.replyingToId,
+    required this.replyController,
+    required this.sendingReply,
+    required this.onToggleExpand,
+    required this.onStartReply,
+    required this.onCancelReply,
+    required this.onSendReply,
   });
 
   final CommentsState state;
   final String? currentProfileId;
   final ValueChanged<String> onDelete;
   final ValueChanged<String> onReport;
+  final Set<String> expandedReplies;
+  final String? replyingToId;
+  final TextEditingController replyController;
+  final bool sendingReply;
+  final ValueChanged<String> onToggleExpand;
+  final ValueChanged<String> onStartReply;
+  final VoidCallback onCancelReply;
+  final ValueChanged<String> onSendReply;
 
   @override
   Widget build(BuildContext context) {
@@ -219,11 +304,17 @@ class _CommentsList extends StatelessWidget {
         for (final comment in state.comments)
           _CommentTile(
             comment: comment,
-            isOwn:
-                currentProfileId != null &&
-                comment.authorId == currentProfileId,
-            onDelete: () => onDelete(comment.id),
-            onReport: () => onReport(comment.id),
+            currentProfileId: currentProfileId,
+            isExpanded: expandedReplies.contains(comment.id),
+            isReplying: replyingToId == comment.id,
+            replyController: replyController,
+            sendingReply: sendingReply,
+            onDelete: onDelete,
+            onReport: onReport,
+            onToggleExpand: onToggleExpand,
+            onStartReply: onStartReply,
+            onCancelReply: onCancelReply,
+            onSendReply: onSendReply,
           ),
         if (state.isLoadingMore)
           const Padding(
@@ -294,8 +385,120 @@ class _CommentsSkeleton extends StatelessWidget {
   }
 }
 
+/// Un commentaire racine : sa ligne, l'action « Répondre », le repli de ses
+/// réponses et le champ de réponse contextuel.
+///
+/// Le bouton « Répondre » n'apparaît JAMAIS sur une réponse : la profondeur 1
+/// est une garantie serveur, l'interface ne doit pas proposer une action qui
+/// serait de toute façon rejetée. Les réponses (rendues via [_CommentRow])
+/// n'ont donc pas accès à ce bouton.
 class _CommentTile extends StatelessWidget {
   const _CommentTile({
+    required this.comment,
+    required this.currentProfileId,
+    required this.isExpanded,
+    required this.isReplying,
+    required this.replyController,
+    required this.sendingReply,
+    required this.onDelete,
+    required this.onReport,
+    required this.onToggleExpand,
+    required this.onStartReply,
+    required this.onCancelReply,
+    required this.onSendReply,
+  });
+
+  final Comment comment;
+  final String? currentProfileId;
+  final bool isExpanded;
+  final bool isReplying;
+  final TextEditingController replyController;
+  final bool sendingReply;
+  final ValueChanged<String> onDelete;
+  final ValueChanged<String> onReport;
+  final ValueChanged<String> onToggleExpand;
+  final ValueChanged<String> onStartReply;
+  final VoidCallback onCancelReply;
+  final ValueChanged<String> onSendReply;
+
+  bool _isOwn(Comment c) =>
+      currentProfileId != null && c.authorId == currentProfileId;
+
+  @override
+  Widget build(BuildContext context) {
+    final replies = comment.replies;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CommentRow(
+            comment: comment,
+            isOwn: _isOwn(comment),
+            onDelete: () => onDelete(comment.id),
+            onReport: () => onReport(comment.id),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 42),
+            child: Wrap(
+              spacing: 4,
+              children: [
+                TextButton(
+                  onPressed: () => onStartReply(comment.id),
+                  child: const Text('Répondre'),
+                ),
+                if (replies.isNotEmpty)
+                  TextButton(
+                    onPressed: () => onToggleExpand(comment.id),
+                    child: Text(
+                      isExpanded
+                          ? 'Masquer les réponses'
+                          : replies.length == 1
+                          ? '1 réponse'
+                          : '${replies.length} réponses',
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (isExpanded)
+            Padding(
+              padding: const EdgeInsets.only(left: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final reply in replies)
+                    _CommentRow(
+                      comment: reply,
+                      isOwn: _isOwn(reply),
+                      onDelete: () => onDelete(reply.id),
+                      onReport: () => onReport(reply.id),
+                    ),
+                ],
+              ),
+            ),
+          if (isReplying)
+            Padding(
+              padding: const EdgeInsets.only(left: 24, top: 4),
+              child: _ReplyInput(
+                controller: replyController,
+                sending: sendingReply,
+                onCancel: onCancelReply,
+                onSend: () => onSendReply(comment.id),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Ligne d'affichage d'un commentaire (racine ou réponse) : avatar, auteur,
+/// date, corps, menu contextuel. Ne porte jamais l'action « Répondre » —
+/// celle-ci vit uniquement dans [_CommentTile], sur les racines.
+class _CommentRow extends StatelessWidget {
+  const _CommentRow({
     required this.comment,
     required this.isOwn,
     required this.onDelete,
@@ -314,7 +517,7 @@ class _CommentTile extends StatelessWidget {
     final name = author?.resolvedName ?? 'Utilisateur';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -461,6 +664,80 @@ class _CommentInput extends StatelessWidget {
           Semantics(
             button: true,
             label: 'Envoyer le commentaire',
+            child: IconButton(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              onPressed: sending ? null : onSend,
+              icon: sending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(Icons.send_rounded, color: theme.colorScheme.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Champ de réponse contextuel à un commentaire racine, avec annulation.
+class _ReplyInput extends StatelessWidget {
+  const _ReplyInput({
+    required this.controller,
+    required this.sending,
+    required this.onCancel,
+    required this.onSend,
+  });
+
+  final TextEditingController controller;
+  final bool sending;
+  final VoidCallback onCancel;
+  final VoidCallback onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 8 : 0,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              autofocus: true,
+              enabled: !sending,
+              maxLength: 2000,
+              minLines: 1,
+              maxLines: 3,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => onSend(),
+              decoration: const InputDecoration(
+                hintText: 'Répondre…',
+                isDense: true,
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Semantics(
+            button: true,
+            label: 'Annuler la réponse',
+            child: IconButton(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              onPressed: sending ? null : onCancel,
+              icon: Icon(
+                Icons.close_rounded,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Semantics(
+            button: true,
+            label: 'Envoyer la réponse',
             child: IconButton(
               constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
               onPressed: sending ? null : onSend,

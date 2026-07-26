@@ -9,6 +9,7 @@ class Profile {
     required this.createdAt,
     this.displayName,
     this.avatarUrl,
+    this.bannerPath,
     this.bio,
     this.subscriberCount = 0,
   });
@@ -17,6 +18,11 @@ class Profile {
   final String username;
   final String? displayName;
   final String? avatarUrl;
+
+  /// Chemin (pas une URL) de la bannière de profil dans le bucket privé
+  /// `avatars`, convention `<uid>/banner.<ext>`. Résolu en URL signée via
+  /// `avatarSignedUrlProvider` (même bucket que l'avatar).
+  final String? bannerPath;
   final String? bio;
   final UserRole role;
   final DateTime createdAt;
@@ -66,6 +72,7 @@ class Profile {
       username: username,
       displayName: json['display_name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
+      bannerPath: json['banner_path'] as String?,
       bio: json['bio'] as String?,
       role: UserRole.fromString(json['role'] as String?),
       createdAt: createdAt,
@@ -82,25 +89,37 @@ class Profile {
     'username': username,
     'display_name': displayName,
     'avatar_url': avatarUrl,
+    'banner_path': bannerPath,
     'bio': bio,
     'created_at': createdAt.toIso8601String(),
   };
 
+  /// Copie avec remplacement des champs fournis.
+  ///
+  /// Correctif : `subscriberCount` était auparavant absent de la signature et
+  /// donc systématiquement remis à 0 (sa valeur par défaut) à chaque
+  /// `copyWith` — un profil édité perdait silencieusement son compteur
+  /// d'abonnés affiché. Il est maintenant préservé par défaut, comme tous les
+  /// autres champs non fournis.
   Profile copyWith({
     String? username,
     String? displayName,
     String? avatarUrl,
+    String? bannerPath,
     String? bio,
     UserRole? role,
+    int? subscriberCount,
   }) {
     return Profile(
       id: id,
       username: username ?? this.username,
       displayName: displayName ?? this.displayName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
+      bannerPath: bannerPath ?? this.bannerPath,
       bio: bio ?? this.bio,
       role: role ?? this.role,
       createdAt: createdAt,
+      subscriberCount: subscriberCount ?? this.subscriberCount,
     );
   }
 
@@ -111,11 +130,22 @@ class Profile {
       other.username == username &&
       other.displayName == displayName &&
       other.avatarUrl == avatarUrl &&
+      other.bannerPath == bannerPath &&
       other.bio == bio &&
       other.role == role &&
-      other.createdAt == createdAt;
+      other.createdAt == createdAt &&
+      other.subscriberCount == subscriberCount;
 
   @override
-  int get hashCode =>
-      Object.hash(id, username, displayName, avatarUrl, bio, role, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    username,
+    displayName,
+    avatarUrl,
+    bannerPath,
+    bio,
+    role,
+    createdAt,
+    subscriberCount,
+  );
 }

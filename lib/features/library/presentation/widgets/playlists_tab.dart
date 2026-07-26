@@ -12,6 +12,35 @@ import '../providers/library_providers.dart';
 import 'playlist_dialogs.dart';
 import 'row_list_skeleton.dart';
 
+/// Vignette de couverture d'une playlist, avec repli sur le même placeholder
+/// rayé que l'écran de détail quand elle n'a pas (encore) de couverture.
+class _PlaylistCoverThumbnail extends ConsumerWidget {
+  const _PlaylistCoverThumbnail({required this.coverPath});
+
+  final String? coverPath;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final coverPath = this.coverPath;
+    if (coverPath == null || coverPath.isEmpty) {
+      return const StripedPlaceholder();
+    }
+
+    final urlAsync = ref.watch(playlistCoverUrlProvider(coverPath));
+    return urlAsync.when(
+      data: (url) => url == null
+          ? const StripedPlaceholder()
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const StripedPlaceholder(),
+            ),
+      loading: () => const StripedPlaceholder(),
+      error: (_, _) => const StripedPlaceholder(),
+    );
+  }
+}
+
 /// Onglet « Playlists » de la Bibliothèque.
 class PlaylistsTab extends ConsumerWidget {
   const PlaylistsTab({super.key});
@@ -119,6 +148,17 @@ class _PlaylistRow extends ConsumerWidget {
 
   final Playlist playlist;
 
+  /// Résout l'URL signée de la couverture actuelle avant d'ouvrir le
+  /// dialogue d'édition (le bucket est privé, elle ne se devine pas).
+  Future<void> _editPlaylist(BuildContext context, WidgetRef ref) async {
+    final coverPath = playlist.coverPath;
+    final coverUrl = coverPath == null
+        ? null
+        : await ref.read(playlistRepositoryProvider).signedCoverUrl(coverPath);
+    if (!context.mounted) return;
+    await editPlaylistFlow(context, ref, playlist, coverUrl: coverUrl);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -132,10 +172,10 @@ class _PlaylistRow extends ConsumerWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: const SizedBox(
+              child: SizedBox(
                 width: 56,
                 height: 56,
-                child: StripedPlaceholder(),
+                child: _PlaylistCoverThumbnail(coverPath: playlist.coverPath),
               ),
             ),
             const SizedBox(width: 14),
@@ -180,11 +220,7 @@ class _PlaylistRow extends ConsumerWidget {
               tooltip: 'Options',
               icon: const Icon(Icons.more_vert_rounded),
               onSelected: (action) => switch (action) {
-                _PlaylistAction.rename => renamePlaylistFlow(
-                  context,
-                  ref,
-                  playlist,
-                ),
+                _PlaylistAction.rename => _editPlaylist(context, ref),
                 _PlaylistAction.visibility => toggleVisibilityFlow(
                   context,
                   ref,
@@ -202,7 +238,7 @@ class _PlaylistRow extends ConsumerWidget {
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.edit_outlined),
-                    title: Text('Renommer'),
+                    title: Text('Modifier'),
                   ),
                 ),
                 PopupMenuItem(

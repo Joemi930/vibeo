@@ -115,6 +115,23 @@ corrects ✚ audit sécurité passé si zone sensible.
 ## Pièges connus
 - Environnement : **Windows 11** — utiliser des commandes compatibles
   (les hooks tournent sous Git Bash).
+- **Le registre de greffons web de Flutter se périme en silence.** Le fichier
+  généré `.dart_tool/**/web_plugin_registrant.dart` peut rester figé à l'état
+  d'une version antérieure du `pubspec` : les greffons ajoutés depuis
+  ne sont alors **pas compilés dans le bundle**, sans le moindre avertissement.
+  Symptôme : `UnimplementedError: <méthode>() has not been implemented`, ou une
+  fonctionnalité qui « ne marche pas » sans erreur claire. C'est ainsi que la
+  lecture vidéo et le partage ont été inertes pendant toute la Phase 3 alors que
+  le code était juste. Vérifier :
+  `grep -c "videoPlayer-" build/web/main.dart.js` (0 = greffon absent).
+  Remède : `flutter clean` puis reconstruire. **Faire ce nettoyage après toute
+  modification de dépendances**, sinon on debogue du code sain.
+- Le navigateur d'aperçu automatisé ne compose aucune frame quand son panneau
+  est masqué : `requestAnimationFrame` ne se déclenche pas, Flutter ne dessine
+  rien, il n'y a **aucun canvas** et les vues plateforme ne s'attachent jamais.
+  Le code Dart s'exécute pourtant (requêtes réseau, journaux). Ne jamais
+  conclure « l'interface est cassée » à partir de ce navigateur ; vérifier le
+  rendu dans un vrai navigateur.
 - `video_compress` ne fonctionne pas sur le web (il dépend de `dart:io`) : il
   est isolé derrière un import conditionnel
   (`lib/features/upload/data/video_compressor.dart`). Le web compresse par

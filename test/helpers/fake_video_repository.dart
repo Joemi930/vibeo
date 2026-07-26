@@ -58,6 +58,15 @@ class FakeVideoRepository implements VideoRepository {
   }
 
   @override
+  Future<List<Video>> fetchSuggested(String videoId, {int limit = 20}) async {
+    calls.add('fetchSuggested:$videoId');
+    if (throwOnFetch) throw Exception('échec réseau simulé');
+    // Le classement réel est calculé en base ; le faux se contente d'exclure
+    // le clip courant, ce que l'interface a le droit de tenir pour acquis.
+    return videos.where((v) => v.id != videoId).take(limit).toList();
+  }
+
+  @override
   Future<List<Genre>> fetchGenres() async {
     calls.add('fetchGenres');
     if (throwOnFetch) throw Exception('échec réseau simulé');

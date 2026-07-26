@@ -13,6 +13,8 @@ class Comment {
     required this.createdAt,
     this.updatedAt,
     this.author,
+    this.parentId,
+    this.replies = const [],
   });
 
   final String id;
@@ -24,6 +26,22 @@ class Comment {
 
   /// Auteur joint à la requête, quand la sélection l'a demandé.
   final ArtistSummary? author;
+
+  /// Commentaire parent, si celui-ci est une réponse. `null` pour un
+  /// commentaire racine. Un seul niveau de profondeur est garanti par le
+  /// serveur (trigger `comments_guard_client_fields`, voir la migration
+  /// `20260726020000_phase35.sql`) : une réponse a donc toujours
+  /// `parentId.replies` vide, jamais rempli par le client.
+  final String? parentId;
+
+  /// Réponses attachées à ce commentaire (uniquement pertinent pour un
+  /// commentaire racine). Jamais lu depuis le JSON directement : rattaché en
+  /// Dart par le repository après une requête séparée
+  /// (voir `SupabaseSocialRepository.fetchComments`).
+  final List<Comment> replies;
+
+  /// Vrai si ce commentaire est lui-même une réponse.
+  bool get isReply => parentId != null;
 
   /// Vrai si le commentaire a été retouché après sa publication.
   bool get isEdited =>
@@ -69,6 +87,7 @@ class Comment {
 
     final updatedAtRaw = json['updated_at'];
     final authorJson = json['author'] ?? json['profiles'];
+    final parentIdRaw = json['parent_id'];
 
     return Comment(
       id: id,
@@ -82,6 +101,7 @@ class Comment {
       author: authorJson is Map<String, dynamic>
           ? ArtistSummary.fromJson(authorJson)
           : null,
+      parentId: parentIdRaw is String ? parentIdRaw : null,
     );
   }
 
@@ -89,13 +109,20 @@ class Comment {
   ///
   /// `created_at`, `updated_at` et `deleted_at` sont posés par la base : un
   /// trigger les restaure de toute façon si le client tente de les fournir.
+  /// `parent_id` n'est inclus que pour une réponse (création) : il est ensuite
+  /// figé par le serveur, jamais réémis à une mise à jour.
   Map<String, dynamic> toJson() => {
     'video_id': videoId,
     'author_id': authorId,
     'body': body,
+    if (parentId != null) 'parent_id': parentId,
   };
 
-  Comment copyWith({String? body, DateTime? updatedAt}) => Comment(
+  Comment copyWith({
+    String? body,
+    DateTime? updatedAt,
+    List<Comment>? replies,
+  }) => Comment(
     id: id,
     videoId: videoId,
     authorId: authorId,
@@ -103,6 +130,8 @@ class Comment {
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     author: author,
+    parentId: parentId,
+    replies: replies ?? this.replies,
   );
 
   @override
@@ -113,9 +142,10 @@ class Comment {
       other.authorId == authorId &&
       other.body == body &&
       other.createdAt == createdAt &&
-      other.updatedAt == updatedAt;
+      other.updatedAt == updatedAt &&
+      other.parentId == parentId;
 
   @override
   int get hashCode =>
-      Object.hash(id, videoId, authorId, body, createdAt, updatedAt);
+      Object.hash(id, videoId, authorId, body, createdAt, updatedAt, parentId);
 }

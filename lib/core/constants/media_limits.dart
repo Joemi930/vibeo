@@ -19,6 +19,11 @@ class MediaLimits {
   /// Taille maximale d'une miniature.
   static const int maxThumbnailBytes = 2 * 1024 * 1024;
 
+  /// Taille maximale d'une couverture de playlist, alignée sur le plafond du
+  /// bucket Storage `playlist-covers` (voir
+  /// `supabase/migrations/20260726020000_phase35.sql`, section 4).
+  static const int maxPlaylistCoverBytes = 5 * 1024 * 1024;
+
   /// Types MIME acceptés à l'upload d'un clip.
   static const List<String> videoMimeTypes = ['video/mp4', 'video/quicktime'];
 

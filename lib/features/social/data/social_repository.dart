@@ -21,13 +21,27 @@ abstract class SocialRepository {
   Future<void> unlike(String videoId);
 
   /// Fil de commentaires d'un clip, plus récents d'abord.
+  ///
+  /// [limit]/[offset] paginent les commentaires RACINE (`parent_id is null`).
+  /// Les réponses de chaque racine retournée sont attachées via
+  /// [Comment.replies], sans pagination propre (profondeur 1 max, un fil de
+  /// réponses reste court).
   Future<List<Comment>> fetchComments(
     String videoId, {
     int limit = 20,
     int offset = 0,
   });
 
-  Future<Comment> addComment({required String videoId, required String body});
+  /// Ajoute un commentaire, ou une réponse si [parentId] est fourni.
+  ///
+  /// Le serveur (trigger `comments_guard_client_fields`) refuse un
+  /// [parentId] qui n'existe pas, qui appartient à un autre clip, ou qui est
+  /// lui-même une réponse (profondeur 1 max).
+  Future<Comment> addComment({
+    required String videoId,
+    required String body,
+    String? parentId,
+  });
 
   /// Supprime un commentaire. Le serveur ne l'accepte que de son auteur (ou
   /// d'un admin) : l'artiste du clip n'a aucun droit dessus.
@@ -125,20 +139,60 @@ class SupabaseSocialRepository implements SocialRepository {
     int limit = 20,
     int offset = 0,
   }) async {
-    final rows = await _client
+    // Choix : DEUX requêtes plutôt qu'une seule ramenant tout le fil.
+    //
+    // La pagination (limit/offset) porte sur les commentaires RACINE, pas sur
+    // les lignes brutes de la table `comments` : une seule requête paginée
+    // sur l'ensemble mélangerait racines et réponses dans la même fenêtre, et
+    // une page de `limit` lignes pourrait ne contenir presque aucune racine
+    // (par ex. un fil très répondu). Le contrat public (`limit`/`offset`,
+    // `hasMore` côté provider) resterait donc incorrect.
+    //
+    // On pagine donc d'abord les racines (`parent_id is null`), puis on
+    // ramène en une seconde requête, SANS pagination, toutes les réponses des
+    // racines obtenues : la profondeur 1 max garantie côté serveur borne déjà
+    // leur nombre par racine (pas de fil infini à charger).
+    final rootRows = await _client
         .from(_commentsTable)
         .select(_commentWithAuthor)
         .eq('video_id', videoId)
         .isFilter('deleted_at', null)
+        .isFilter('parent_id', null)
         .order('created_at', ascending: false)
         .range(offset, offset + limit - 1);
-    return rows.map<Comment>(Comment.fromJson).toList();
+
+    final roots = rootRows.map<Comment>(Comment.fromJson).toList();
+    if (roots.isEmpty) return roots;
+
+    final rootIds = roots.map((c) => c.id).toList();
+    final replyRows = await _client
+        .from(_commentsTable)
+        .select(_commentWithAuthor)
+        .inFilter('parent_id', rootIds)
+        .isFilter('deleted_at', null)
+        .order('created_at', ascending: true);
+
+    final repliesByParent = <String, List<Comment>>{};
+    for (final row in replyRows) {
+      final reply = Comment.fromJson(row);
+      final parentId = reply.parentId;
+      if (parentId == null) continue;
+      (repliesByParent[parentId] ??= []).add(reply);
+    }
+
+    return roots
+        .map(
+          (root) =>
+              root.copyWith(replies: repliesByParent[root.id] ?? const []),
+        )
+        .toList();
   }
 
   @override
   Future<Comment> addComment({
     required String videoId,
     required String body,
+    String? parentId,
   }) async {
     try {
       final row = await _client
@@ -147,16 +201,17 @@ class SupabaseSocialRepository implements SocialRepository {
             'video_id': videoId,
             'author_id': _userId,
             'body': body.trim(),
+            'parent_id': ?parentId,
           })
           .select(_commentWithAuthor)
           .single();
       return Comment.fromJson(row);
     } on PostgrestException catch (e) {
-      throw SocialException(_commentError(e));
+      throw SocialException(_commentError(e, isReply: parentId != null));
     }
   }
 
-  static String _commentError(PostgrestException e) {
+  static String _commentError(PostgrestException e, {bool isReply = false}) {
     final raw = '${e.message} ${e.details}'.toLowerCase();
     if (raw.contains('30 commentaires') || raw.contains('rate')) {
       return 'Tu as atteint la limite de 30 commentaires par heure. '
@@ -164,6 +219,11 @@ class SupabaseSocialRepository implements SocialRepository {
     }
     if (raw.contains('row-level security') || e.code == '42501') {
       return 'Tu ne peux pas commenter ce clip.';
+    }
+    // errcode 22023 : violation levée par comments_guard_client_fields()
+    // (parent introuvable, autre clip, ou déjà une réponse — profondeur 1).
+    if (isReply && e.code == '22023') {
+      return 'Impossible de répondre à ce commentaire.';
     }
     return 'L\'envoi du commentaire a échoué. Réessaie.';
   }

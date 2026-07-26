@@ -128,8 +128,12 @@ class _ArtistBody extends ConsumerWidget {
   }
 }
 
-/// Bannière dégradée avec avatar rond superposé et flèche de retour.
-class _Banner extends StatelessWidget {
+/// Bannière avec avatar rond superposé et flèche de retour.
+///
+/// Affiche l'image de `profile.bannerPath` si l'artiste en a choisi une
+/// (résolue en URL signée, bucket privé) ; retombe sur le dégradé de thème
+/// sinon, pour ne jamais laisser de trou visuel.
+class _Banner extends ConsumerWidget {
   const _Banner({required this.profile});
 
   final Profile profile;
@@ -139,9 +143,13 @@ class _Banner extends StatelessWidget {
   static const double _avatarOverlap = 30;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final topInset = MediaQuery.of(context).padding.top;
+    final bannerUrl = ref
+        .watch(avatarSignedUrlProvider(profile.bannerPath))
+        .asData
+        ?.value;
 
     return SizedBox(
       height: _bannerHeight + _avatarOverlap,
@@ -152,8 +160,22 @@ class _Banner extends StatelessWidget {
             height: _bannerHeight,
             width: double.infinity,
             decoration: BoxDecoration(
-              gradient: VibeoColors.of(context).gradient,
+              gradient: bannerUrl == null
+                  ? VibeoColors.of(context).gradient
+                  : null,
             ),
+            clipBehavior: Clip.antiAlias,
+            child: bannerUrl == null
+                ? null
+                : Image.network(
+                    bannerUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: VibeoColors.of(context).gradient,
+                      ),
+                    ),
+                  ),
           ),
           Positioned(
             top: topInset + 6,

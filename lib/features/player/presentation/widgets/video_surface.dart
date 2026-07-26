@@ -68,6 +68,7 @@ class VideoSurface extends ConsumerWidget {
               else if (playback.errorMessage != null)
                 _PlaybackError(
                   message: playback.errorMessage!,
+                  detail: playback.technicalDetail,
                   onRetry: () => controller.open(video),
                 )
               else if (playback.isLoading)
@@ -79,6 +80,12 @@ class VideoSurface extends ConsumerWidget {
                   isPlaying: playback.isPlaying,
                   onTap: controller.togglePlay,
                 ),
+              // Le navigateur a imposé le démarrage en muet : le clic sur ce
+              // bandeau est le geste utilisateur qui débloque le son.
+              if (playback.needsUnmute &&
+                  !playback.isAudioMode &&
+                  playback.errorMessage == null)
+                _UnmuteBanner(onTap: controller.unmute),
               if (!playback.isAudioMode && playback.errorMessage == null)
                 _BottomTimeline(
                   position: playback.position,
@@ -184,40 +191,130 @@ class _PlayPauseButton extends StatelessWidget {
   }
 }
 
-class _PlaybackError extends StatelessWidget {
-  const _PlaybackError({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
+/// Bandeau proposant de rétablir le son coupé d'office par le navigateur.
+class _UnmuteBanner extends StatelessWidget {
+  const _UnmuteBanner({required this.onTap});
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.error_outline_rounded,
-              color: Colors.white,
-              size: 32,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-            ),
-            const SizedBox(height: 14),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white70),
+    return Positioned(
+      top: 14,
+      right: 12,
+      child: Semantics(
+        button: true,
+        label: 'Activer le son',
+        child: Material(
+          color: Colors.black.withValues(alpha: 0.62),
+          borderRadius: BorderRadius.circular(999),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.volume_off_rounded, color: Colors.white, size: 18),
+                  SizedBox(width: 7),
+                  Text(
+                    'Activer le son',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              onPressed: onRetry,
-              child: const Text('Réessayer'),
             ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlaybackError extends StatefulWidget {
+  const _PlaybackError({
+    required this.message,
+    required this.onRetry,
+    this.detail,
+  });
+  final String message;
+  final String? detail;
+  final VoidCallback onRetry;
+
+  @override
+  State<_PlaybackError> createState() => _PlaybackErrorState();
+}
+
+class _PlaybackErrorState extends State<_PlaybackError> {
+  bool _showDetail = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final detail = widget.detail;
+
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                color: Colors.white,
+                size: 32,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                widget.message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
+              const SizedBox(height: 14),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white70),
+                ),
+                onPressed: widget.onRetry,
+                child: const Text('Réessayer'),
+              ),
+              // Volontairement disponible en release : sans ce détail, une
+              // panne de lecture chez un utilisateur est indiagnosticable, et
+              // le message affiché ne suffit pas à distinguer un codec refusé
+              // d'une coupure réseau.
+              if (detail != null && detail.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                TextButton(
+                  style: TextButton.styleFrom(foregroundColor: Colors.white70),
+                  onPressed: () => setState(() => _showDetail = !_showDetail),
+                  child: Text(
+                    _showDetail
+                        ? 'Masquer les détails techniques'
+                        : 'Détails techniques',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
+                if (_showDetail)
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 460),
+                    child: SelectableText(
+                      detail,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 11,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
         ),
       ),
     );

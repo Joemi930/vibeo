@@ -12,22 +12,71 @@ import 'widgets/scrubber.dart';
 
 /// Mode audio seul, plein écran (voir `Maquettes/AudioMode.dc.html`).
 ///
-/// Lit entièrement l'état de [playbackControllerProvider] : cet écran n'ouvre
-/// rien lui-même, il suppose qu'un clip est déjà chargé (on y arrive depuis
-/// la pilule « Audio » du lecteur).
-class AudioModeScreen extends ConsumerWidget {
-  const AudioModeScreen({super.key});
+/// L'identifiant du clip fait partie de l'adresse (`/audio/:videoId`) : l'écran
+/// est donc autonome. Si la lecture en cours porte déjà sur ce clip — cas
+/// normal, on arrive depuis la pilule « Audio » du lecteur — il se contente
+/// d'afficher l'état existant. Sinon (lien partagé, rechargement de page), il
+/// charge le clip lui-même et bascule en audio, au lieu d'afficher un écran
+/// vide comme le faisait la route `/audio` sans paramètre.
+class AudioModeScreen extends ConsumerStatefulWidget {
+  const AudioModeScreen({required this.videoId, super.key});
+
+  final String videoId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AudioModeScreen> createState() => _AudioModeScreenState();
+}
+
+class _AudioModeScreenState extends ConsumerState<AudioModeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Après la première frame : `open` touche l'état d'autres providers, ce
+    // qui est interdit pendant la construction de l'arbre.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureLoaded());
+  }
+
+  Future<void> _ensureLoaded() async {
+    final playback = ref.read(playbackControllerProvider);
+    if (playback.video?.id == widget.videoId) {
+      // Déjà ce clip : on s'assure seulement d'être bien en mode audio.
+      if (!playback.isAudioMode) {
+        await ref.read(playbackControllerProvider.notifier).switchToAudio();
+      }
+      return;
+    }
+
+    final video = await ref.read(videoByIdProvider(widget.videoId).future);
+    if (video == null || !mounted) return;
+    final controller = ref.read(playbackControllerProvider.notifier);
+    await controller.open(video);
+    if (!mounted) return;
+    await controller.switchToAudio();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final playback = ref.watch(playbackControllerProvider);
+    final isThisVideo = playback.video?.id == widget.videoId;
     return Scaffold(
       body: SafeArea(
-        child: playback.hasMedia
+        child: playback.hasMedia && isThisVideo
             ? _AudioContent(playback: playback)
-            : const _AudioEmptyState(),
+            : const _AudioLoading(),
       ),
     );
+  }
+}
+
+/// Chargement d'un clip arrivé par lien direct. Volontairement sobre : à ce
+/// stade on ne sait pas encore si le clip existe, afficher « aucune lecture »
+/// serait trompeur.
+class _AudioLoading extends StatelessWidget {
+  const _AudioLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: CircularProgressIndicator());
   }
 }
 
@@ -401,49 +450,6 @@ class _QueueSection extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _AudioEmptyState extends StatelessWidget {
-  const _AudioEmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.music_off_rounded,
-              size: 42,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Aucune lecture en cours.',
-              style: theme.textTheme.titleSmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Lance un clip pour utiliser le mode audio.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 18),
-            FilledButton(
-              onPressed: () => VibeoAppBar.popOrGo(context),
-              child: const Text('Retour'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -1,6 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vibeo/features/library/domain/playlist.dart';
 import 'package:vibeo/features/library/presentation/providers/library_providers.dart';
+import 'package:vibeo/features/upload/data/thumbnail_picker.dart';
 
 import '../../../../helpers/fake_playlist_repository.dart';
 import '../../../../helpers/fake_video_repository.dart';
@@ -203,5 +207,142 @@ void main() {
           .value;
       expect(state.map((v) => v.id), ['video-1', 'video-2']);
     });
+  });
+
+  group('PlaylistController.createDetailed avec couverture', () {
+    final cover = PickedThumbnail(
+      bytes: Uint8List.fromList([1, 2, 3]),
+      fileExtension: 'jpg',
+      contentType: 'image/jpeg',
+    );
+
+    test('téléverse la couverture puis met à jour cover_path', () async {
+      final repo = FakePlaylistRepository();
+      final container = makeContainer(repo);
+      addTearDown(container.dispose);
+
+      final outcome = await container
+          .read(playlistControllerProvider.notifier)
+          .createDetailed(title: 'Nouvelle liste', cover: cover);
+
+      expect(outcome.error, isNull);
+      expect(outcome.playlist?.coverPath, isNotNull);
+      expect(repo.calls, contains('uploadCover:${outcome.playlist!.id}'));
+      expect(repo.calls, contains('update:${outcome.playlist!.id}'));
+    });
+
+    test('un échec de téléversement ne laisse pas une playlist fantôme : elle '
+        'est renvoyée quand même, avec un message dédié', () async {
+      final repo = FakePlaylistRepository(throwOnCoverUpload: true);
+      final container = makeContainer(repo);
+      addTearDown(container.dispose);
+
+      final outcome = await container
+          .read(playlistControllerProvider.notifier)
+          .createDetailed(title: 'Nouvelle liste', cover: cover);
+
+      expect(outcome.playlist, isNotNull);
+      expect(outcome.playlist!.coverPath, isNull);
+      expect(
+        outcome.error,
+        'Playlist créée, mais l\'image n\'a pas pu être ajoutée.',
+      );
+      // La playlist existe bel et bien côté dépôt.
+      expect(repo.playlists.map((p) => p.id), contains(outcome.playlist!.id));
+    });
+
+    test('sans couverture, aucun appel de téléversement n\'est fait', () async {
+      final repo = FakePlaylistRepository();
+      final container = makeContainer(repo);
+      addTearDown(container.dispose);
+
+      await container
+          .read(playlistControllerProvider.notifier)
+          .createDetailed(title: 'Sans image');
+
+      expect(repo.calls.any((c) => c.startsWith('uploadCover:')), isFalse);
+    });
+  });
+
+  group('PlaylistController.edit', () {
+    final existing = Playlist(
+      id: 'playlist-1',
+      ownerId: 'user-1',
+      title: 'Titre initial',
+      createdAt: DateTime(2026, 7, 25),
+      coverPath: 'user-1/playlist-1.jpg',
+    );
+
+    test('remplace la couverture et supprime l\'ancien fichier', () async {
+      final repo = FakePlaylistRepository(playlists: [existing]);
+      final container = makeContainer(repo);
+      addTearDown(container.dispose);
+
+      final newCover = PickedThumbnail(
+        bytes: Uint8List.fromList([4, 5, 6]),
+        fileExtension: 'png',
+        contentType: 'image/png',
+      );
+
+      final error = await container
+          .read(playlistControllerProvider.notifier)
+          .edit(
+            playlistId: existing.id,
+            ownerId: existing.ownerId,
+            title: 'Titre modifié',
+            newCover: newCover,
+            previousCoverPath: existing.coverPath,
+          );
+
+      expect(error, isNull);
+      expect(repo.playlists.single.title, 'Titre modifié');
+      expect(repo.playlists.single.coverPath, isNot(existing.coverPath));
+      expect(repo.calls, contains('removeCoverFile:${existing.coverPath}'));
+    });
+
+    test('removeCover efface cover_path et supprime le fichier', () async {
+      final repo = FakePlaylistRepository(playlists: [existing]);
+      final container = makeContainer(repo);
+      addTearDown(container.dispose);
+
+      final error = await container
+          .read(playlistControllerProvider.notifier)
+          .edit(
+            playlistId: existing.id,
+            ownerId: existing.ownerId,
+            title: existing.title,
+            removeCover: true,
+            previousCoverPath: existing.coverPath,
+          );
+
+      expect(error, isNull);
+      expect(repo.playlists.single.coverPath, isNull);
+      expect(repo.calls, contains('removeCoverFile:${existing.coverPath}'));
+    });
+
+    test(
+      'sans changement de couverture, aucun fichier n\'est touché',
+      () async {
+        final repo = FakePlaylistRepository(playlists: [existing]);
+        final container = makeContainer(repo);
+        addTearDown(container.dispose);
+
+        await container
+            .read(playlistControllerProvider.notifier)
+            .edit(
+              playlistId: existing.id,
+              ownerId: existing.ownerId,
+              title: 'Autre titre',
+              previousCoverPath: existing.coverPath,
+            );
+
+        expect(
+          repo.calls.any((c) => c.startsWith('removeCoverFile:')),
+          isFalse,
+        );
+        expect(repo.calls.any((c) => c.startsWith('uploadCover:')), isFalse);
+        expect(repo.playlists.single.coverPath, existing.coverPath);
+      },
+    );
   });
 }

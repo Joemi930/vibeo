@@ -17,8 +17,8 @@ class AppRoutes {
   static const String profile = '/profile';
 
   // Écrans secondaires.
-  static const String audio = '/audio';
   static const String settings = '/settings';
+  static const String accountPrivacy = '/settings/account';
   static const String studio = '/studio';
   static const String upload = '/upload';
   static const String becomeArtist = '/become-artist';
@@ -28,6 +28,11 @@ class AppRoutes {
   // Écrans paramétrés. Les motifs `:id` servent à go_router, les fonctions
   // ci-dessous à construire un lien concret (partage, navigation interne).
   static const String videoPattern = '/video/:videoId';
+
+  /// Mode audio d'un clip. L'identifiant fait partie du chemin : sans lui,
+  /// tous les clips partageaient la même adresse et un rechargement de page
+  /// tombait sur un écran vide, faute de savoir quoi rejouer.
+  static const String audioPattern = '/audio/:videoId';
   static const String artistPattern = '/artist/:artistId';
   static const String editVideoPattern = '/studio/video/:videoId/edit';
 
@@ -38,6 +43,9 @@ class AppRoutes {
 
   /// Lecteur d'un clip — c'est aussi la cible des liens de partage.
   static String video(String videoId) => '/video/$videoId';
+
+  /// Écoute d'un clip en mode audio seul.
+  static String audio(String videoId) => '/audio/$videoId';
 
   /// Modification d'un clip par son artiste (réservée au Studio).
   static String editVideo(String videoId) => '/studio/video/$videoId/edit';
@@ -52,7 +60,7 @@ class AppRoutes {
   static bool isPublic(String location) {
     return location == home ||
         location == search ||
-        location == audio ||
+        location.startsWith('/audio/') ||
         location.startsWith('/video/') ||
         location.startsWith('/artist/');
   }

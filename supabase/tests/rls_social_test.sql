@@ -969,5 +969,359 @@ begin
   raise notice 'SUCCES : reorder_playlist refuse un appelant non proprietaire.';
 end $$;
 
+-- ---------------------------------------------------------------------------
+-- 17) Phase 3.5 -- user_identities : invisible pour autrui, visible pour son
+--     propriétaire.
+-- ---------------------------------------------------------------------------
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-00000000000a","role":"authenticated"}',
+  true
+);
+
+insert into public.user_identities (user_id, legal_first_name, legal_last_name)
+values ('a0000000-0000-0000-0000-00000000000a', 'Alice', 'Aupropriétaire');
+
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"b0000000-0000-0000-0000-00000000000b","role":"authenticated"}',
+  true
+);
+
+do $$
+declare
+  n int;
+begin
+  select count(*) into n from public.user_identities
+   where user_id = 'a0000000-0000-0000-0000-00000000000a';
+  if n <> 0 then
+    raise exception 'ECHEC : B voit l''identite civile de A (% ligne(s)).', n;
+  end if;
+  raise notice 'SUCCES : identite civile de A invisible pour B.';
+end $$;
+
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-00000000000a","role":"authenticated"}',
+  true
+);
+
+do $$
+declare
+  n int;
+begin
+  select count(*) into n from public.user_identities
+   where user_id = 'a0000000-0000-0000-0000-00000000000a';
+  if n <> 1 then
+    raise exception 'ECHEC : A ne voit pas sa propre identite civile (% ligne(s)).', n;
+  end if;
+  raise notice 'SUCCES : A voit sa propre identite civile.';
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 18) Phase 3.5 -- reponses aux commentaires (profondeur 1 max).
+--     Auteur : C (artiste), PAS A -- le quota de 30 commentaires/heure de A a
+--     deja ete volontairement epuise par le test 11 dans la meme transaction.
+-- ---------------------------------------------------------------------------
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"c0000000-0000-0000-0000-00000000000c","role":"authenticated"}',
+  true
+);
+
+do $$
+declare
+  v_root_id   uuid;
+  v_reply_id  uuid;
+  v_rejected  boolean;
+begin
+  insert into public.comments (video_id, author_id, body)
+  values ('e0000000-0000-0000-0000-00000000000f', 'c0000000-0000-0000-0000-00000000000c', 'Commentaire racine 3.5')
+  returning id into v_root_id;
+
+  -- Reponse valide : meme clip, parent racine.
+  insert into public.comments (video_id, author_id, body, parent_id)
+  values ('e0000000-0000-0000-0000-00000000000f', 'c0000000-0000-0000-0000-00000000000c', 'Reponse valide', v_root_id)
+  returning id into v_reply_id;
+
+  -- Reponse sur une reponse : rejetee (profondeur 1 max).
+  v_rejected := false;
+  begin
+    insert into public.comments (video_id, author_id, body, parent_id)
+    values ('e0000000-0000-0000-0000-00000000000f', 'c0000000-0000-0000-0000-00000000000c', 'Reponse a une reponse', v_reply_id);
+  exception
+    when sqlstate '22023' then
+      v_rejected := true;
+  end;
+  if not v_rejected then
+    raise exception 'ECHEC : une reponse sur une reponse a ete acceptee.';
+  end if;
+  raise notice 'SUCCES : reponse sur une reponse rejetee (profondeur 1 max).';
+
+  -- Reponse visant un parent d'un AUTRE clip : rejetee.
+  v_rejected := false;
+  begin
+    insert into public.comments (video_id, author_id, body, parent_id)
+    values ('e0000000-0000-0000-0000-00000000000e', 'c0000000-0000-0000-0000-00000000000c', 'Reponse sur mauvais clip', v_root_id);
+  exception
+    when sqlstate '22023' then
+      v_rejected := true;
+  end;
+  if not v_rejected then
+    raise exception 'ECHEC : une reponse visant un parent d''un autre clip a ete acceptee.';
+  end if;
+  raise notice 'SUCCES : reponse sur un parent d''un autre clip rejetee.';
+
+  -- parent_id immuable a l'UPDATE.
+  declare
+    v_root2_id uuid;
+    v_parent_after uuid;
+  begin
+    insert into public.comments (video_id, author_id, body)
+    values ('e0000000-0000-0000-0000-00000000000f', 'c0000000-0000-0000-0000-00000000000c', 'Autre racine 3.5')
+    returning id into v_root2_id;
+
+    update public.comments set parent_id = v_root2_id where id = v_reply_id;
+
+    select parent_id into v_parent_after from public.comments where id = v_reply_id;
+    if v_parent_after is distinct from v_root_id then
+      raise exception 'ECHEC : parent_id a ete modifie par l''UPDATE (obtenu %).', v_parent_after;
+    end if;
+    raise notice 'SUCCES : parent_id fige apres creation.';
+  end;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 19) Phase 3.5 -- couverture de playlist privee non lisible via storage.
+-- ---------------------------------------------------------------------------
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-00000000000a","role":"authenticated"}',
+  true
+);
+
+do $$
+begin
+  update public.playlists
+     set cover_path = 'a0000000-0000-0000-0000-00000000000a/cover-priv.png'
+   where id = 'f0000000-0000-0000-0000-00000000000f';
+
+  insert into storage.objects (bucket_id, name, owner)
+  values ('playlist-covers', 'a0000000-0000-0000-0000-00000000000a/cover-priv.png', 'a0000000-0000-0000-0000-00000000000a');
+
+  update public.playlists set is_public = false where id = 'f0000000-0000-0000-0000-00000000000f';
+end $$;
+
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"b0000000-0000-0000-0000-00000000000b","role":"authenticated"}',
+  true
+);
+
+do $$
+declare
+  n int;
+begin
+  select count(*) into n from storage.objects
+   where bucket_id = 'playlist-covers'
+     and name = 'a0000000-0000-0000-0000-00000000000a/cover-priv.png';
+  if n <> 0 then
+    raise exception 'ECHEC : B voit la couverture de la playlist privee de A (% ligne(s)).', n;
+  end if;
+  raise notice 'SUCCES : couverture de playlist privee non lisible par un autre utilisateur.';
+end $$;
+
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-00000000000a","role":"authenticated"}',
+  true
+);
+
+do $$
+begin
+  update public.playlists set is_public = true where id = 'f0000000-0000-0000-0000-00000000000f';
+end $$;
+
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"b0000000-0000-0000-0000-00000000000b","role":"authenticated"}',
+  true
+);
+
+do $$
+declare
+  n int;
+begin
+  select count(*) into n from storage.objects
+   where bucket_id = 'playlist-covers'
+     and name = 'a0000000-0000-0000-0000-00000000000a/cover-priv.png';
+  if n <> 1 then
+    raise exception 'ECHEC : B ne voit pas la couverture de la playlist desormais publique de A (% ligne(s)).', n;
+  end if;
+  raise notice 'SUCCES : couverture de playlist visible une fois la playlist rendue publique.';
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 19 bis) Phase 3.5 -- DETOURNEMENT par une playlist tierce (trouve a l'audit).
+--
+-- L'egalite de texte `p.cover_path = storage.objects.name` ne suffit pas : B
+-- pourrait ecrire le chemin de A dans SA propre playlist, la rendre publique,
+-- et rouvrir ainsi l'acces a l'image privee de A -- definitivement, meme si A
+-- repasse la sienne en prive. Deux barrieres doivent tenir :
+--   1. le trigger `playlists_guard_client_fields` refuse un `cover_path` hors
+--      du dossier du proprietaire (c'est le refus attendu ci-dessous) ;
+--   2. la politique `playlist_covers_storage_select_visible` exige en plus que
+--      le dossier appartienne au proprietaire de la playlist qui debloque.
+-- ---------------------------------------------------------------------------
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-00000000000a","role":"authenticated"}',
+  true
+);
+
+-- A repasse sa playlist en prive : l'image ne doit plus etre accessible.
+do $$
+begin
+  update public.playlists set is_public = false
+   where id = 'f0000000-0000-0000-0000-00000000000f';
+end $$;
+
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"b0000000-0000-0000-0000-00000000000b","role":"authenticated"}',
+  true
+);
+
+-- Barriere 1 : le trigger doit refuser un cover_path hors du dossier de B.
+do $$
+declare
+  v_blocked boolean := false;
+begin
+  insert into public.playlists (id, owner_id, title, is_public)
+  values (
+    'f0000000-0000-0000-0000-0000000000bb',
+    'b0000000-0000-0000-0000-00000000000b',
+    'Playlist de B',
+    true
+  );
+
+  begin
+    update public.playlists
+       set cover_path = 'a0000000-0000-0000-0000-00000000000a/cover-priv.png'
+     where id = 'f0000000-0000-0000-0000-0000000000bb';
+  exception when others then
+    v_blocked := true;
+  end;
+
+  if not v_blocked then
+    raise exception
+      'ECHEC : B a pu pointer cover_path sur le dossier de A (verrou d''ecriture absent).';
+  end if;
+  raise notice 'SUCCES : cover_path hors du dossier du proprietaire refuse a l''ecriture.';
+end $$;
+
+-- Barriere 2 : la politique de LECTURE doit tenir seule, meme si la ligne
+-- portait ce chemin. On force la valeur avec le role serveur (exempte du
+-- trigger) pour isoler la politique.
+reset role;
+update public.playlists
+   set cover_path = 'a0000000-0000-0000-0000-00000000000a/cover-priv.png'
+ where id = 'f0000000-0000-0000-0000-0000000000bb';
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"b0000000-0000-0000-0000-00000000000b","role":"authenticated"}',
+  true
+);
+
+do $$
+declare
+  n int;
+begin
+  select count(*) into n from storage.objects
+   where bucket_id = 'playlist-covers'
+     and name = 'a0000000-0000-0000-0000-00000000000a/cover-priv.png';
+  if n <> 0 then
+    raise exception
+      'ECHEC : la couverture privee de A fuit via la playlist publique de B (% ligne(s)).', n;
+  end if;
+  raise notice 'SUCCES : la politique de lecture ne deverrouille pas l''objet d''un tiers.';
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 20) Phase 3.5 -- suggested_videos ne renvoie que du publie.
+-- ---------------------------------------------------------------------------
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"c0000000-0000-0000-0000-00000000000c","role":"authenticated"}',
+  true
+);
+
+do $$
+declare
+  v_unpub_id uuid;
+begin
+  insert into public.videos (artist_id, title, video_path, duration_seconds, size_bytes, status)
+  values (
+    'c0000000-0000-0000-0000-00000000000c',
+    'Clip non publie 3.5',
+    'c0000000-0000-0000-0000-00000000000c/clip-unpub.mp4',
+    60, 1000000, 'processing'
+  )
+  returning id into v_unpub_id;
+end $$;
+
+reset role;
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"a0000000-0000-0000-0000-00000000000a","role":"authenticated"}',
+  true
+);
+
+do $$
+declare
+  n_total     int;
+  n_unpub     int;
+begin
+  select count(*) into n_total
+    from public.suggested_videos('e0000000-0000-0000-0000-00000000000e', 50);
+
+  select count(*) into n_unpub
+    from public.suggested_videos('e0000000-0000-0000-0000-00000000000e', 50) sv
+   where sv.status <> 'published';
+
+  if n_unpub <> 0 then
+    raise exception 'ECHEC : suggested_videos renvoie % clip(s) non publie(s).', n_unpub;
+  end if;
+  if n_total = 0 then
+    raise exception 'ECHEC : suggested_videos ne renvoie aucun clip alors que des clips publies existent.';
+  end if;
+  raise notice 'SUCCES : suggested_videos ne renvoie que des clips publies (% resultats).', n_total;
+end $$;
+
 reset role;
 rollback;

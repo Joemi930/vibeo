@@ -11,6 +11,7 @@ import 'widgets/artist_row.dart';
 import 'widgets/comments_section.dart';
 import 'widgets/description_card.dart';
 import 'widgets/player_skeleton.dart';
+import 'widgets/suggestions_column.dart';
 import 'widgets/video_surface.dart';
 
 /// Lecteur plein écran d'un clip (voir `Maquettes/Player.dc.html` et
@@ -34,8 +35,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
   String? _openedVideoId;
 
   /// Permet à la pilule « Commenter » de faire défiler jusqu'au fil de
-  /// commentaires puis d'y ouvrir le clavier, quelle que soit la mise en page
-  /// (mobile ou colonne web) — un seul des deux est monté à la fois.
+  /// commentaires puis d'y ouvrir le clavier. `CommentsSection` est désormais
+  /// systématiquement sous la vidéo (mobile comme web) : une seule instance
+  /// est montée, la clé la cible donc sans ambiguïté.
   final GlobalKey<CommentsSectionState> _commentsKey = GlobalKey();
 
   @override
@@ -106,7 +108,7 @@ class _PlayerBody extends StatelessWidget {
                         VideoSurface(video: video, borderRadius: 16),
                         _InfoColumn(
                           video: video,
-                          showComments: false,
+                          showComments: true,
                           commentsKey: commentsKey,
                         ),
                       ],
@@ -126,7 +128,7 @@ class _PlayerBody extends StatelessWidget {
                   ),
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
-                    child: CommentsSection(key: commentsKey, videoId: video.id),
+                    child: SuggestionsColumn(videoId: video.id),
                   ),
                 ),
               ),
@@ -142,6 +144,7 @@ class _PlayerBody extends StatelessWidget {
                 child: _InfoColumn(
                   video: video,
                   showComments: true,
+                  showSuggestions: true,
                   commentsKey: commentsKey,
                 ),
               ),
@@ -157,11 +160,16 @@ class _InfoColumn extends StatelessWidget {
   const _InfoColumn({
     required this.video,
     required this.showComments,
+    this.showSuggestions = false,
     required this.commentsKey,
   });
 
   final Video video;
   final bool showComments;
+
+  /// Affiche la colonne « À suivre » sous les commentaires (mise en page
+  /// étroite uniquement : en large, elle vit déjà dans la colonne de droite).
+  final bool showSuggestions;
   final GlobalKey<CommentsSectionState> commentsKey;
 
   @override
@@ -206,6 +214,10 @@ class _InfoColumn extends StatelessWidget {
           if (showComments) ...[
             const SizedBox(height: 20),
             CommentsSection(key: commentsKey, videoId: video.id),
+          ],
+          if (showSuggestions) ...[
+            const SizedBox(height: 24),
+            SuggestionsColumn(videoId: video.id),
           ],
         ],
       ),

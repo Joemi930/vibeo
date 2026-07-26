@@ -29,6 +29,14 @@ abstract class VideoRepository {
     bool onlyPublished = true,
   });
 
+  /// Clips suggérés après [videoId], pour la colonne « À suivre » du lecteur.
+  ///
+  /// Le classement est calculé en base (fonction `suggested_videos`) : même
+  /// artiste, même genre, popularité, fraîcheur. Il n'est volontairement pas
+  /// reproduit ici — le faire côté client obligerait à rapatrier tout le
+  /// catalogue.
+  Future<List<Video>> fetchSuggested(String videoId, {int limit = 20});
+
   /// Liste de référence des genres musicaux.
   Future<List<Genre>> fetchGenres();
 
@@ -171,6 +179,21 @@ class SupabaseVideoRepository implements VideoRepository {
 
     final rows = await query.order('created_at', ascending: false);
     return rows.map<Video>(Video.fromJson).toList();
+  }
+
+  @override
+  Future<List<Video>> fetchSuggested(String videoId, {int limit = 20}) async {
+    // `suggested_videos` est SECURITY INVOKER : la RLS de `videos` s'applique
+    // à l'appelant, un invité ne peut donc rien voir de plus qu'ailleurs.
+    final rows = await _client.rpc(
+      'suggested_videos',
+      params: {'p_video_id': videoId, 'p_limit': limit},
+    );
+    if (rows is! List) return const [];
+    return rows
+        .cast<Map<String, dynamic>>()
+        .map<Video>(Video.fromJson)
+        .toList();
   }
 
   @override

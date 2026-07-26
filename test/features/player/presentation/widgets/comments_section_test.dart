@@ -291,6 +291,108 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('une réponse s\'affiche sous son commentaire parent', (
+    tester,
+  ) async {
+    final repo = FakeSocialRepository(
+      comments: [
+        buildComment(id: 'c1', body: 'Commentaire racine'),
+        Comment(
+          id: 'c2',
+          videoId: 'video-1',
+          authorId: 'user-2',
+          body: 'Une réponse au premier commentaire',
+          createdAt: DateTime(2026, 7, 24, 11),
+          parentId: 'c1',
+        ),
+      ],
+    );
+    await pumpComments(tester, AppTheme.light, socialRepo: repo);
+
+    expect(find.text('Commentaire racine'), findsOneWidget);
+    // Repliée par défaut : le corps de la réponse n'est pas encore visible.
+    expect(find.text('Une réponse au premier commentaire'), findsNothing);
+    expect(find.text('1 réponse'), findsOneWidget);
+
+    await tester.tap(find.text('1 réponse'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Une réponse au premier commentaire'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('aucun bouton « Répondre » sur une réponse', (tester) async {
+    final repo = FakeSocialRepository(
+      comments: [
+        buildComment(id: 'c1', body: 'Commentaire racine'),
+        Comment(
+          id: 'c2',
+          videoId: 'video-1',
+          authorId: 'user-2',
+          body: 'Une réponse',
+          createdAt: DateTime(2026, 7, 24, 11),
+          parentId: 'c1',
+        ),
+      ],
+    );
+    await pumpComments(tester, AppTheme.dark, socialRepo: repo);
+
+    await tester.tap(find.text('1 réponse'));
+    await tester.pumpAndSettle();
+
+    // Un seul bouton « Répondre », celui de la racine.
+    expect(find.text('Répondre'), findsOneWidget);
+  });
+
+  testWidgets('envoie une réponse rattachée à sa racine', (tester) async {
+    final repo = FakeSocialRepository(
+      comments: [buildComment(id: 'c1', body: 'Commentaire racine')],
+    );
+    await pumpComments(tester, AppTheme.light, socialRepo: repo);
+
+    await tester.tap(find.text('Répondre'));
+    await tester.pumpAndSettle();
+
+    // Le champ de réponse apparaît dans l'arbre AVANT le champ racine (imbriqué
+    // dans la liste des commentaires, elle-même avant `_CommentInput`) : `.first`.
+    await tester.enterText(find.byType(TextField).first, 'Ma réponse');
+    await tester.tap(find.bySemanticsLabel('Envoyer la réponse'));
+    await tester.pumpAndSettle();
+
+    expect(repo.calls, contains('addComment:video-1'));
+    expect(find.text('Ma réponse'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'un invité qui tente de répondre est invité à se connecter, sans envoi',
+    (tester) async {
+      final repo = FakeSocialRepository(
+        comments: [buildComment(id: 'c1', body: 'Commentaire racine')],
+      );
+      await pumpComments(
+        tester,
+        AppTheme.light,
+        socialRepo: repo,
+        authenticated: false,
+      );
+
+      await tester.tap(find.text('Répondre'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Réponse d\'un invité',
+      );
+      await tester.tap(find.bySemanticsLabel('Envoyer la réponse'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Connecte-toi pour commenter'), findsOneWidget);
+      expect(repo.calls, isNot(contains('addComment:video-1')));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('annuler la confirmation conserve le commentaire', (
     tester,
   ) async {

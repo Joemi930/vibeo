@@ -11,6 +11,7 @@ import '../../../core/widgets/video_card.dart';
 import '../../video/domain/video.dart';
 import '../domain/playlist.dart';
 import 'providers/library_providers.dart';
+import 'widgets/playlist_dialogs.dart';
 
 /// Détail d'une playlist : en-tête, puis clips dans l'ordre choisi par son
 /// propriétaire (glisser pour réordonner ou retirer).
@@ -25,9 +26,20 @@ class PlaylistScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final playlistAsync = ref.watch(playlistByIdProvider(playlistId));
+    final playlist = playlistAsync.asData?.value;
 
     return Scaffold(
-      appBar: VibeoAppBar(title: playlistAsync.asData?.value?.title),
+      appBar: VibeoAppBar(
+        title: playlist?.title,
+        actions: [
+          if (playlist != null)
+            IconButton(
+              tooltip: 'Modifier la playlist',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => _editPlaylist(context, ref, playlist),
+            ),
+        ],
+      ),
       body: playlistAsync.when(
         loading: () => const _PlaylistDetailSkeleton(),
         error: (_, _) => ErrorState(
@@ -49,6 +61,21 @@ class PlaylistScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Résout l'URL signée de la couverture actuelle avant d'ouvrir le dialogue
+/// d'édition (le bucket est privé, elle ne se devine pas).
+Future<void> _editPlaylist(
+  BuildContext context,
+  WidgetRef ref,
+  Playlist playlist,
+) async {
+  final coverPath = playlist.coverPath;
+  final coverUrl = coverPath == null
+      ? null
+      : await ref.read(playlistRepositoryProvider).signedCoverUrl(coverPath);
+  if (!context.mounted) return;
+  await editPlaylistFlow(context, ref, playlist, coverUrl: coverUrl);
 }
 
 class _PlaylistDetailBody extends ConsumerWidget {
@@ -100,6 +127,33 @@ class _PlaylistDetailBody extends ConsumerWidget {
 Widget _buildItemSkeletonRow(BuildContext context) =>
     const VideoListTileSkeleton(thumbnailWidth: 96);
 
+class _PlaylistCover extends ConsumerWidget {
+  const _PlaylistCover({required this.coverPath});
+
+  final String? coverPath;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final coverPath = this.coverPath;
+    if (coverPath == null || coverPath.isEmpty) {
+      return const StripedPlaceholder();
+    }
+
+    final urlAsync = ref.watch(playlistCoverUrlProvider(coverPath));
+    return urlAsync.when(
+      data: (url) => url == null
+          ? const StripedPlaceholder()
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => const StripedPlaceholder(),
+            ),
+      loading: () => const StripedPlaceholder(),
+      error: (_, _) => const StripedPlaceholder(),
+    );
+  }
+}
+
 class _PlaylistHeader extends StatelessWidget {
   const _PlaylistHeader({required this.playlist});
 
@@ -118,11 +172,27 @@ class _PlaylistHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                playlist.title,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 84,
+                      height: 84,
+                      child: _PlaylistCover(coverPath: playlist.coverPath),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      playlist.title,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               if (description != null && description.isNotEmpty) ...[
                 const SizedBox(height: 6),

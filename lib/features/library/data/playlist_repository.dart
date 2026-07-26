@@ -1,5 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/constants/media_limits.dart';
+import '../../../core/utils/dev_log.dart';
 import '../../video/domain/video.dart';
 import '../domain/playlist.dart';
 
@@ -28,9 +32,29 @@ abstract class PlaylistRepository {
     String? title,
     String? description,
     bool? isPublic,
+    String? coverPath,
+    bool clearCover = false,
   });
 
   Future<void> delete(String playlistId);
+
+  /// Téléverse la couverture et renvoie son chemin de stockage.
+  ///
+  /// [playlistId] doit déjà exister (le chemin en dépend, convention
+  /// `<uid>/<playlist_id>.<ext>`) : appeler après [create], jamais avant.
+  Future<String> uploadCover({
+    required String userId,
+    required String playlistId,
+    required Uint8List bytes,
+    required String fileExtension,
+    required String contentType,
+  });
+
+  /// Supprime un fichier de couverture devenu inutile (remplacement, retrait).
+  Future<void> removeCoverFile(String storagePath);
+
+  /// URL signée temporaire pour afficher une couverture de playlist.
+  Future<String?> signedCoverUrl(String? storagePath);
 
   /// Ajoute un clip à la fin de la playlist.
   Future<void> addVideo({required String playlistId, required String videoId});
@@ -71,6 +95,7 @@ class SupabasePlaylistRepository implements PlaylistRepository {
   static const String _playlistsTable = 'playlists';
   static const String _itemsTable = 'playlist_items';
   static const String _viewEventsTable = 'view_events';
+  static const String _coversBucket = 'playlist-covers';
 
   /// Clip joint avec son artiste, comme dans `VideoRepository`.
   static const String _videoWithArtist = '''
@@ -151,23 +176,82 @@ class SupabasePlaylistRepository implements PlaylistRepository {
     String? title,
     String? description,
     bool? isPublic,
+    String? coverPath,
+    bool clearCover = false,
   }) async {
-    final row = await _client
-        .from(_playlistsTable)
-        .update({
-          'title': ?title?.trim(),
-          'description': ?description?.trim(),
-          'is_public': ?isPublic,
-        })
-        .eq('id', playlistId)
-        .select()
-        .single();
-    return Playlist.fromJson(row);
+    try {
+      final row = await _client
+          .from(_playlistsTable)
+          .update({
+            'title': ?title?.trim(),
+            'description': ?description?.trim(),
+            'is_public': ?isPublic,
+            if (clearCover) 'cover_path': null else 'cover_path': ?coverPath,
+          })
+          .eq('id', playlistId)
+          .select()
+          .single();
+      return Playlist.fromJson(row);
+    } on PostgrestException catch (e) {
+      logError('mise à jour de playlist impossible', e);
+      throw const PlaylistException('L\'opération a échoué. Réessaie.');
+    }
   }
 
   @override
   Future<void> delete(String playlistId) async {
     await _client.from(_playlistsTable).delete().eq('id', playlistId);
+  }
+
+  @override
+  Future<String> uploadCover({
+    required String userId,
+    required String playlistId,
+    required Uint8List bytes,
+    required String fileExtension,
+    required String contentType,
+  }) async {
+    // Premier segment = auth.uid() : exigé par la RLS du bucket.
+    final path = '$userId/$playlistId.$fileExtension';
+    try {
+      await _client.storage
+          .from(_coversBucket)
+          .uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(contentType: contentType, upsert: true),
+          );
+    } on StorageException catch (e) {
+      logError('téléversement de couverture impossible', e);
+      throw const PlaylistException(
+        'L\'image n\'a pas pu être envoyée. Réessaie.',
+      );
+    }
+    return path;
+  }
+
+  @override
+  Future<void> removeCoverFile(String storagePath) async {
+    if (storagePath.isEmpty) return;
+    try {
+      await _client.storage.from(_coversBucket).remove([storagePath]);
+    } on StorageException catch (e) {
+      // Non bloquant : un fichier orphelin dans un bucket privé n'expose rien.
+      logError('suppression de couverture impossible', e);
+    }
+  }
+
+  @override
+  Future<String?> signedCoverUrl(String? storagePath) async {
+    if (storagePath == null || storagePath.isEmpty) return null;
+    try {
+      return await _client.storage
+          .from(_coversBucket)
+          .createSignedUrl(storagePath, MediaLimits.signedUrlTtlSeconds);
+    } on StorageException catch (e) {
+      logError('URL signée de couverture impossible', e);
+      return null;
+    }
   }
 
   @override

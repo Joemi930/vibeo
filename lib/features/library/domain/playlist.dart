@@ -12,6 +12,7 @@ class Playlist {
     this.isPublic = false,
     this.itemCount = 0,
     this.updatedAt,
+    this.coverPath,
   });
 
   final String id;
@@ -19,6 +20,10 @@ class Playlist {
   final String title;
   final String? description;
   final bool isPublic;
+
+  /// Chemin (pas une URL) dans le bucket privé `playlist-covers`, convention
+  /// `<uid>/<playlist_id>.<ext>`. `null` si aucune couverture n'a été choisie.
+  final String? coverPath;
 
   /// Nombre de clips, maintenu par trigger SQL — jamais écrit par le client.
   final int itemCount;
@@ -70,6 +75,7 @@ class Playlist {
       updatedAt: updatedAtRaw is String
           ? DateTime.tryParse(updatedAtRaw)
           : null,
+      coverPath: json['cover_path'] as String?,
     );
   }
 
@@ -81,6 +87,7 @@ class Playlist {
     'title': title,
     'description': description,
     'is_public': isPublic,
+    'cover_path': coverPath,
   };
 
   Playlist copyWith({
@@ -88,7 +95,9 @@ class Playlist {
     String? description,
     bool? isPublic,
     int? itemCount,
+    String? coverPath,
     bool clearDescription = false,
+    bool clearCover = false,
   }) => Playlist(
     id: id,
     ownerId: ownerId,
@@ -98,6 +107,7 @@ class Playlist {
     itemCount: itemCount ?? this.itemCount,
     createdAt: createdAt,
     updatedAt: updatedAt,
+    coverPath: clearCover ? null : (coverPath ?? this.coverPath),
   );
 
   @override
@@ -109,7 +119,8 @@ class Playlist {
       other.description == description &&
       other.isPublic == isPublic &&
       other.itemCount == itemCount &&
-      other.createdAt == createdAt;
+      other.createdAt == createdAt &&
+      other.coverPath == coverPath;
 
   @override
   int get hashCode => Object.hash(
@@ -120,5 +131,6 @@ class Playlist {
     isPublic,
     itemCount,
     createdAt,
+    coverPath,
   );
 }

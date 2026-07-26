@@ -256,23 +256,43 @@ class CommentsController extends AsyncNotifier<CommentsState> {
     }
   }
 
-  /// Ajoute un commentaire et le place en tête du fil.
+  /// Ajoute un commentaire, ou une réponse si [parentId] est fourni.
+  ///
+  /// Une réponse est rattachée aux réponses de sa racine ([parentId]) plutôt
+  /// que placée en tête du fil : un seul niveau de profondeur (décision
+  /// actée), la racine reste le point d'ancrage visuel.
   ///
   /// Renvoie `null` en cas de succès, sinon le message d'erreur à afficher.
-  Future<String?> add(String body) async {
+  Future<String?> add(String body, {String? parentId}) async {
     final current = state.asData?.value;
     if (current == null) return 'Réessaie dans un instant.';
 
     try {
       final comment = await ref
           .read(socialRepositoryProvider)
-          .addComment(videoId: videoId, body: body);
-      state = AsyncData(
-        current.copyWith(
-          comments: [comment, ...current.comments],
-          clearError: true,
-        ),
-      );
+          .addComment(videoId: videoId, body: body, parentId: parentId);
+
+      if (parentId == null) {
+        state = AsyncData(
+          current.copyWith(
+            comments: [comment, ...current.comments],
+            clearError: true,
+          ),
+        );
+      } else {
+        state = AsyncData(
+          current.copyWith(
+            comments: [
+              for (final root in current.comments)
+                if (root.id == parentId)
+                  root.copyWith(replies: [...root.replies, comment])
+                else
+                  root,
+            ],
+            clearError: true,
+          ),
+        );
+      }
       return null;
     } on SocialException catch (e) {
       return e.message;
@@ -282,7 +302,8 @@ class CommentsController extends AsyncNotifier<CommentsState> {
     }
   }
 
-  /// Supprime un commentaire. Le serveur refuse si ce n'est pas le sien.
+  /// Supprime un commentaire, racine ou réponse. Le serveur refuse si ce
+  /// n'est pas le sien.
   Future<String?> remove(String commentId) async {
     final current = state.asData?.value;
     if (current == null) return null;
@@ -290,7 +311,14 @@ class CommentsController extends AsyncNotifier<CommentsState> {
     final previous = current.comments;
     state = AsyncData(
       current.copyWith(
-        comments: previous.where((c) => c.id != commentId).toList(),
+        comments: previous
+            .where((c) => c.id != commentId)
+            .map(
+              (c) => c.copyWith(
+                replies: c.replies.where((r) => r.id != commentId).toList(),
+              ),
+            )
+            .toList(),
       ),
     );
 

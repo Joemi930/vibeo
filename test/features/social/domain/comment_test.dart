@@ -97,6 +97,26 @@ void main() {
       final json = {...validJson, 'created_at': 'pas-une-date'};
       expect(() => Comment.fromJson(json), throwsFormatException);
     });
+
+    test('parentId est nul par défaut (commentaire racine)', () {
+      final comment = Comment.fromJson(validJson);
+      expect(comment.parentId, isNull);
+      expect(comment.isReply, isFalse);
+      expect(comment.replies, isEmpty);
+    });
+
+    test('lit parent_id quand présent (réponse)', () {
+      final json = {...validJson, 'parent_id': 'comment-0'};
+      final comment = Comment.fromJson(json);
+      expect(comment.parentId, 'comment-0');
+      expect(comment.isReply, isTrue);
+    });
+
+    test('ignore un parent_id d\'un type invalide', () {
+      final json = {...validJson, 'parent_id': 42};
+      final comment = Comment.fromJson(json);
+      expect(comment.parentId, isNull);
+    });
   });
 
   group('Comment.toJson', () {
@@ -107,6 +127,20 @@ void main() {
         'video_id': 'video-1',
         'author_id': 'user-1',
         'body': 'Superbe clip !',
+      });
+    });
+
+    test('inclut parent_id quand le commentaire est une réponse', () {
+      final comment = Comment.fromJson({
+        ...validJson,
+        'parent_id': 'comment-0',
+      });
+
+      expect(comment.toJson(), {
+        'video_id': 'video-1',
+        'author_id': 'user-1',
+        'body': 'Superbe clip !',
+        'parent_id': 'comment-0',
       });
     });
   });
@@ -164,6 +198,22 @@ void main() {
       final comment = Comment.fromJson(validJson);
       final copy = comment.copyWith();
       expect(copy, comment);
+    });
+
+    test('remplace les réponses sans affecter l\'égalité (hors champ)', () {
+      final comment = Comment.fromJson(validJson);
+      final reply = Comment.fromJson({
+        ...validJson,
+        'id': 'comment-2',
+        'parent_id': 'comment-1',
+      });
+
+      final withReply = comment.copyWith(replies: [reply]);
+
+      expect(withReply.replies, [reply]);
+      // Les réponses n'entrent pas dans l'égalité : seul le contenu propre au
+      // commentaire racine compte.
+      expect(withReply, comment);
     });
   });
 

@@ -116,5 +116,61 @@ void main() {
       expect(p.isArtist, isTrue);
       expect(p.isAdmin, isFalse);
     });
+
+    test('copyWith préserve subscriberCount et bannerPath par défaut', () {
+      final p = Profile(
+        id: 'id',
+        username: 'naika',
+        role: UserRole.artist,
+        createdAt: DateTime(2026),
+        bannerPath: 'id/banner.jpg',
+        subscriberCount: 42,
+      );
+
+      final edited = p.copyWith(displayName: 'Naïka');
+
+      expect(edited.subscriberCount, 42, reason: 'ne doit pas retomber à 0');
+      expect(edited.bannerPath, 'id/banner.jpg');
+      expect(edited.displayName, 'Naïka');
+    });
+
+    test('copyWith remplace subscriberCount et bannerPath si fournis', () {
+      final p = Profile(
+        id: 'id',
+        username: 'naika',
+        role: UserRole.listener,
+        createdAt: DateTime(2026),
+        subscriberCount: 1,
+      );
+
+      final edited = p.copyWith(
+        subscriberCount: 2,
+        bannerPath: 'id/banner.png',
+      );
+
+      expect(edited.subscriberCount, 2);
+      expect(edited.bannerPath, 'id/banner.png');
+    });
+  });
+
+  group('Profile.fromJson — banner_path', () {
+    test('mappe banner_path quand présent', () {
+      final p = Profile.fromJson({
+        'id': 'id',
+        'username': 'naika',
+        'created_at': '2026-01-01T00:00:00Z',
+        'banner_path': 'id/banner.webp',
+      });
+      expect(p.bannerPath, 'id/banner.webp');
+    });
+
+    test('banner_path absent → null', () {
+      final p = Profile.fromJson({
+        'id': 'id',
+        'username': 'naika',
+        'created_at': '2026-01-01T00:00:00Z',
+      });
+      expect(p.bannerPath, isNull);
+    });
   });
 }

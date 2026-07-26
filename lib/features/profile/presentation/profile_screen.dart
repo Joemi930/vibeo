@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../core/utils/dev_log.dart';
 import '../../../core/widgets/verified_badge.dart';
 import '../../../core/widgets/vibeo_app_bar.dart';
 import '../../auth/domain/profile.dart';
 import '../../auth/domain/user_role.dart';
+import '../../upload/data/thumbnail_picker.dart';
+import '../../upload/data/video_picker.dart' show PickerException;
 import 'providers/profile_providers.dart';
+import 'widgets/banner_editor.dart';
 
 /// Écran Profil : affichage et édition (nom affiché, bio, avatar).
 class ProfileScreen extends ConsumerWidget {
@@ -62,77 +65,89 @@ class _ProfileView extends ConsumerWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.zero,
           children: [
-            const SizedBox(height: 8),
-            Center(
-              child: _AvatarEditor(
-                profile: profile,
-                imageUrl: avatarAsync.asData?.value,
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(16),
               ),
+              child: BannerEditor(profile: profile),
             ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Flexible(
-                  child: Text(
-                    profile.resolvedName,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+              child: Column(
+                children: [
+                  Center(
+                    child: _AvatarEditor(
+                      profile: profile,
+                      imageUrl: avatarAsync.asData?.value,
                     ),
                   ),
-                ),
-                if (profile.isArtist) ...[
-                  const SizedBox(width: 6),
-                  const VerifiedBadge(size: 20),
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          profile.resolvedName,
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (profile.isArtist) ...[
+                        const SizedBox(width: 6),
+                        const VerifiedBadge(size: 20),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Center(
+                    child: Text(
+                      '@${profile.username}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Center(child: _RoleBadge(role: profile.role)),
+                  const SizedBox(height: 24),
+                  _InfoCard(
+                    title: 'Bio',
+                    child: Text(
+                      (profile.bio == null || profile.bio!.trim().isEmpty)
+                          ? 'Aucune bio pour le moment.'
+                          : profile.bio!,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () => _openEditSheet(context, ref),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Modifier le profil'),
+                  ),
+                  const SizedBox(height: 12),
+                  // Un artiste est un utilisateur comme les autres : sa seule
+                  // différence est l'accès au Studio (statistiques,
+                  // publication, suppression de ses clips).
+                  if (profile.isArtist)
+                    OutlinedButton.icon(
+                      onPressed: () => context.push(AppRoutes.studio),
+                      icon: const Icon(Icons.video_settings_rounded),
+                      label: const Text('Ouvrir le Studio'),
+                    )
+                  else
+                    OutlinedButton.icon(
+                      onPressed: () => context.push(AppRoutes.becomeArtist),
+                      icon: const Icon(Icons.verified_outlined),
+                      label: const Text('Devenir artiste'),
+                    ),
                 ],
-              ],
-            ),
-            const SizedBox(height: 4),
-            Center(
-              child: Text(
-                '@${profile.username}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
               ),
             ),
-            const SizedBox(height: 10),
-            Center(child: _RoleBadge(role: profile.role)),
-            const SizedBox(height: 24),
-            _InfoCard(
-              title: 'Bio',
-              child: Text(
-                (profile.bio == null || profile.bio!.trim().isEmpty)
-                    ? 'Aucune bio pour le moment.'
-                    : profile.bio!,
-                style: theme.textTheme.bodyMedium,
-              ),
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: () => _openEditSheet(context, ref),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Modifier le profil'),
-            ),
-            const SizedBox(height: 12),
-            // Un artiste est un utilisateur comme les autres : sa seule
-            // différence est l'accès au Studio (statistiques, publication,
-            // suppression de ses clips).
-            if (profile.isArtist)
-              OutlinedButton.icon(
-                onPressed: () => context.push(AppRoutes.studio),
-                icon: const Icon(Icons.video_settings_rounded),
-                label: const Text('Ouvrir le Studio'),
-              )
-            else
-              OutlinedButton.icon(
-                onPressed: () => context.push(AppRoutes.becomeArtist),
-                icon: const Icon(Icons.verified_outlined),
-                label: const Text('Devenir artiste'),
-              ),
           ],
         ),
       ),
@@ -154,27 +169,33 @@ class _AvatarEditor extends ConsumerWidget {
   final String? imageUrl;
 
   Future<void> _pickAndUpload(BuildContext context, WidgetRef ref) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024,
-      imageQuality: 85,
-    );
-    if (picked == null) return;
-    final bytes = await picked.readAsBytes();
-    final ext = _extensionOf(picked.name);
-    final ok = await ref
-        .read(profileControllerProvider.notifier)
-        .uploadAvatar(
-          userId: profile.id,
-          bytes: bytes,
-          fileExtension: ext,
-          contentType: _contentTypeOf(ext),
+    try {
+      // Passe par `pickThumbnailImage` : détection du type MIME par
+      // extension réelle (pas de devinette qui enverrait, par exemple, un
+      // `.gif` en `image/jpeg`) et vérification de taille alignée sur le
+      // plafond Storage, au lieu de dupliquer cette logique ici.
+      final picked = await pickThumbnailImage(maxWidth: 1024);
+      if (picked == null) return;
+      final ok = await ref
+          .read(profileControllerProvider.notifier)
+          .uploadAvatar(
+            userId: profile.id,
+            bytes: picked.bytes,
+            fileExtension: picked.fileExtension,
+            contentType: picked.contentType,
+          );
+      if (context.mounted && !ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Échec du téléversement de l\'avatar.')),
         );
-    if (context.mounted && !ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Échec du téléversement de l\'avatar.')),
-      );
+      }
+    } on PickerException catch (e) {
+      logError('ProfileScreen', e);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     }
   }
 
@@ -241,24 +262,6 @@ class _AvatarEditor extends ConsumerWidget {
     return (parts.first.characters.take(1).toString() +
             parts[1].characters.take(1).toString())
         .toUpperCase();
-  }
-
-  static String _extensionOf(String name) {
-    final dot = name.lastIndexOf('.');
-    if (dot == -1) return 'jpg';
-    final ext = name.substring(dot + 1).toLowerCase();
-    return ext == 'jpeg' ? 'jpg' : ext;
-  }
-
-  static String _contentTypeOf(String ext) {
-    switch (ext) {
-      case 'png':
-        return 'image/png';
-      case 'webp':
-        return 'image/webp';
-      default:
-        return 'image/jpeg';
-    }
   }
 }
 

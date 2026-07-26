@@ -163,6 +163,14 @@ void main() {
   testWidgets('« Modifier le profil » ouvre la feuille d\'édition', (
     tester,
   ) async {
+    // Le bouton peut se trouver sous le pli avec la bannière ajoutée en tête
+    // d'écran : on agrandit la fenêtre de test plutôt que de dépendre d'un
+    // défilement fragile.
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await pumpProfile(tester, AppTheme.dark, profile: baseProfile);
 
     await tester.tap(find.text('Modifier le profil'));

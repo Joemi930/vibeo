@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/router/app_routes.dart';
 import '../../../../core/utils/share_links.dart';
 
 import '../../../../core/auth/require_auth.dart';
 import '../../../../core/utils/format_utils.dart';
+import '../../../library/presentation/widgets/add_to_playlist_sheet.dart';
 import '../../../social/presentation/providers/social_providers.dart';
 import '../../../social/presentation/widgets/report_sheet.dart';
 import '../../../video/domain/video.dart';
@@ -63,6 +65,13 @@ class ActionPillsRow extends ConsumerWidget {
           ),
           const SizedBox(width: 8),
           _Pill(
+            icon: Icons.playlist_add_rounded,
+            label: 'Playlist',
+            semanticLabel: 'Ajouter ce clip à une playlist',
+            onTap: () => _addToPlaylist(context, ref),
+          ),
+          const SizedBox(width: 8),
+          _Pill(
             icon: Icons.headphones_rounded,
             label: 'Audio',
             semanticLabel: 'Passer en mode audio',
@@ -96,6 +105,12 @@ class ActionPillsRow extends ConsumerWidget {
     await showReportSheet(context, videoId: video.id);
   }
 
+  Future<void> _addToPlaylist(BuildContext context, WidgetRef ref) async {
+    if (!await requireAuth(context, ref, gate: AuthGate.playlist)) return;
+    if (!context.mounted) return;
+    await showAddToPlaylistSheet(context, video);
+  }
+
   Future<void> _share(BuildContext context) async {
     // Le lien pointe vers `/#/video/<id>`, une route publique : le
     // destinataire ouvre le clip sans compte.
@@ -112,7 +127,7 @@ class ActionPillsRow extends ConsumerWidget {
   Future<void> _goAudio(BuildContext context, WidgetRef ref) async {
     await ref.read(playbackControllerProvider.notifier).switchToAudio();
     if (!context.mounted) return;
-    context.push('/audio');
+    context.push(AppRoutes.audio(video.id));
   }
 }
 
