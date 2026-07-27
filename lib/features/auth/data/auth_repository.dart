@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/config/env.dart';
 import '../domain/profile.dart';
 
 /// Schéma de redirection deep-link utilisé pour l'OAuth (Google) sur mobile.
@@ -116,9 +117,16 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<bool> signInWithGoogle() {
+    // Sur le web, on renseigne explicitement l'URL de redirection pour que
+    // Supabase sache où renvoyer l'utilisateur après l'authentification Google.
+    // Sans cela, Supabase utilise sa SITE_URL interne, qui peut ne pas être
+    // configurée ou pointer vers localhost.
+    final webRedirect = kIsWeb && Env.webBaseUrl.isNotEmpty
+        ? Env.webBaseUrl
+        : null;
     return _auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: kIsWeb ? null : kOAuthRedirectMobile,
+      redirectTo: kIsWeb ? webRedirect : kOAuthRedirectMobile,
       authScreenLaunchMode: kIsWeb
           ? LaunchMode.platformDefault
           : LaunchMode.externalApplication,
