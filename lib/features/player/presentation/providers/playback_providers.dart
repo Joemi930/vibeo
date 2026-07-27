@@ -28,6 +28,7 @@ class PlaybackState {
     this.errorMessage,
     this.technicalDetail,
     this.needsUnmute = false,
+    this.engineGeneration = 0,
   });
 
   final Video? video;
@@ -51,6 +52,16 @@ class PlaybackState {
   /// utilisateur qui lève le blocage.
   final bool needsUnmute;
 
+  /// Incrémenté à chaque création ou destruction du moteur vidéo.
+  ///
+  /// Le `VideoPlayerController` est un champ privé du contrôleur, donc invisible
+  /// de `ref.watch` : un widget qui le lisait ne se reconstruisait qu'au hasard
+  /// de la dernière mutation d'état. Résultat, la vue plateforme reconstruite au
+  /// retour du mode audio n'était jamais rattachée à l'écran, et le bouton
+  /// « Revenir à la vidéo » paraissait inerte. Ce compteur rend l'événement
+  /// observable sans exposer le contrôleur lui-même.
+  final int engineGeneration;
+
   bool get hasMedia => video != null;
   bool get isAudioMode => mode == PlaybackMode.audio;
 
@@ -70,6 +81,7 @@ class PlaybackState {
     String? errorMessage,
     String? technicalDetail,
     bool? needsUnmute,
+    int? engineGeneration,
     bool clearError = false,
     bool clearVideo = false,
   }) {
@@ -85,6 +97,7 @@ class PlaybackState {
           ? null
           : (technicalDetail ?? this.technicalDetail),
       needsUnmute: needsUnmute ?? this.needsUnmute,
+      engineGeneration: engineGeneration ?? this.engineGeneration,
     );
   }
 }
@@ -108,6 +121,15 @@ class PlaybackController extends Notifier<PlaybackState> {
 
   /// Vue déjà comptabilisée pour ce clip : évite d'appeler la RPC en boucle.
   bool _viewRecorded = false;
+
+  /// Un changement de mode est en cours.
+  ///
+  /// Une bascule enchaîne une re-signature d'URL, l'arrêt d'un moteur et
+  /// l'initialisation de l'autre : une à trois secondes pendant lesquelles rien
+  /// ne bouge à l'écran. L'utilisateur retape donc le bouton. Sans ce verrou,
+  /// deux `VideoPlayerController` étaient créés, le premier écrasé sans être
+  /// libéré — une vue plateforme fuitée sur le web à chaque double clic.
+  bool _switching = false;
 
   VideoPlayerController? get videoController => _videoController;
 
@@ -197,6 +219,7 @@ class PlaybackController extends Notifier<PlaybackState> {
       duration: controller.value.duration,
       position: from,
       needsUnmute: refused,
+      engineGeneration: state.engineGeneration + 1,
       clearError: true,
     );
   }
@@ -372,9 +395,24 @@ class PlaybackController extends Notifier<PlaybackState> {
   /// notification système — le navigateur ne le permet pas.
   Future<void> switchToAudio() async {
     final video = state.video;
-    if (video == null || state.isAudioMode) return;
+    if (video == null || state.isAudioMode || _switching) return;
+    _switching = true;
+    try {
+      await _switchToAudio(video);
+    } finally {
+      _switching = false;
+    }
+  }
+
+  Future<void> _switchToAudio(Video video) async {
     final url = await _freshSignedUrl(video);
-    if (url == null) return;
+    if (url == null) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Ce clip est indisponible pour le moment.',
+      );
+      return;
+    }
 
     final from = state.position;
     state = state.copyWith(isLoading: true);
@@ -416,16 +454,53 @@ class PlaybackController extends Notifier<PlaybackState> {
   }
 
   /// Revient à la lecture vidéo, à la position atteinte en audio.
-  Future<void> switchToVideo() async {
+  ///
+  /// Renvoie `true` si la vidéo repart. Un appelant qui doit aussi naviguer ne
+  /// doit **pas** conditionner sa navigation à ce résultat : l'utilisateur a
+  /// demandé à quitter le mode audio, il doit quitter l'écran même si le moteur
+  /// vidéo refuse de démarrer — l'erreur l'attendra sur le lecteur.
+  Future<bool> switchToVideo() async {
     final video = state.video;
-    if (video == null || !state.isAudioMode) return;
-    final url = await _freshSignedUrl(video);
-    if (url == null) return;
+    if (video == null || _switching) return false;
+    // Pas de garde sur `isAudioMode` : si une bascule audio a échoué à
+    // mi-chemin, l'état peut déjà être en mode vidéo alors qu'aucun moteur ne
+    // tourne. Refuser d'agir dans ce cas rendait le bouton silencieusement
+    // inerte, exactement le symptôme signalé.
+    if (!state.isAudioMode && _videoController != null) return true;
 
-    final from = state.position;
-    state = state.copyWith(isLoading: true);
-    await _stopAudio();
-    await _startVideo(url, from);
+    _switching = true;
+    try {
+      final url = await _freshSignedUrl(video);
+      if (url == null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Ce clip est indisponible pour le moment.',
+        );
+        return false;
+      }
+
+      final from = state.position;
+      state = state.copyWith(isLoading: true);
+      await _stopAudio();
+      await _startVideo(url, from);
+      return true;
+    } catch (error, stack) {
+      // Sans ce bloc, une exception de `_startVideo` laissait `isLoading` à vrai
+      // pour toujours : l'écran restait en chargement, sans message ni moyen de
+      // réessayer, et la ligne de navigation qui suivait l'appel n'était jamais
+      // atteinte. C'est la cause première du bouton « Revenir à la vidéo » mort.
+      logError('retour au mode vidéo impossible', error, stack);
+      state = state.copyWith(
+        mode: PlaybackMode.video,
+        isLoading: false,
+        isPlaying: false,
+        errorMessage: _readableError(error.toString()),
+        technicalDetail: error.toString(),
+      );
+      return false;
+    } finally {
+      _switching = false;
+    }
   }
 
   /// URL signée valide pour ce clip, re-signée à chaque changement de mode.

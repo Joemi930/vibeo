@@ -1,0 +1,36 @@
+# Configuration gitleaks pour Vibeo.
+#
+# On part des règles par défaut et on ne fait qu'y ajouter des exclusions
+# ciblées. Élargir une exclusion est facile et silencieux : chacune ci-dessous
+# est justifiée, et il faut une raison écrite pour en ajouter une.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Exclusions justifiées, à ne pas élargir sans raison écrite"
+
+paths = [
+  # Bibliothèque tierce minifiée (mediabunny, MPL-2.0) vendorée pour la
+  # compression WebCodecs. Le code minifié produit en masse des faux positifs
+  # d'entropie ; le fichier ne contient aucun secret et n'est jamais modifié
+  # à la main.
+  '''web/js/mediabunny\.min\.js''',
+
+  # Gabarit documentaire : il ne contient que des noms de variables et des
+  # valeurs d'exemple. Le vrai `.env` est ignoré par git.
+  '''\.env\.example''',
+]
+
+regexes = [
+  # Clé PUBLIABLE Supabase, présente dans les exemples de documentation.
+  #
+  # Elle est publique par conception : elle est incrustée dans le bundle web
+  # livré au navigateur, et c'est la RLS — pas son secret — qui protège les
+  # données. Gitleaks la détecte parce qu'elle a la forme d'un JWT.
+  #
+  # ATTENTION : cette exclusion ne couvre QUE la forme `sb_publishable_…` et
+  # les JWT de rôle `anon`. La clé `service_role` a la même forme générale et
+  # doit continuer d'être détectée — c'est elle qui contourne toute la RLS.
+  '''sb_publishable_[A-Za-z0-9_-]{20,}''',
+]

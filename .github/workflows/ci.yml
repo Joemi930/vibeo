@@ -6,7 +6,33 @@ on:
   pull_request:
     branches: ['**']
 
+# Les poussées rapprochées s'annulent : seul le dernier état d'une branche
+# mérite d'être vérifié.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
+  secrets:
+    name: Scan de secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Sans l'historique complet, gitleaks ne scanne que l'état courant :
+          # une clé committée puis retirée passerait inaperçue alors qu'elle
+          # reste lisible dans l'historique — et donc compromise.
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
+
   build:
     name: Analyse, tests et build web
     runs-on: ubuntu-latest
@@ -33,11 +59,35 @@ jobs:
       - name: Tests (unitaires + widgets)
         run: flutter test
 
+      # `integration_test/` n'est PAS lancé ici : il exige un émulateur Android
+      # ou un chromedriver, absents de ce runner. Il s'exécute en local (voir
+      # README). `flutter test` reste la porte verte unique de la CI.
+
       - name: Build web
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          WEB_BASE_URL: ${{ secrets.WEB_BASE_URL }}
         run: |
-          flutter build web --release \
+          flutter build web --release --csp \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=WEB_BASE_URL="$WEB_BASE_URL"
+
+  edge-functions:
+    name: Tests des Edge Functions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Installer Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # Ces tests n'appellent aucun service d'IA réel : `fetch` est remplacé le
+      # temps de chaque cas. Aucune clé n'est donc nécessaire ici, et il ne faut
+      # surtout pas en ajouter — un test qui consomme un quota n'est pas un test.
+      - name: Tests Deno
+        run: deno test --allow-net --allow-env supabase/functions/tests/

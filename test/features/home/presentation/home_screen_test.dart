@@ -7,6 +7,7 @@ import 'package:vibeo/core/theme/app_theme.dart';
 import 'package:vibeo/core/theme/theme_mode_provider.dart';
 import 'package:vibeo/features/auth/presentation/providers/auth_providers.dart';
 import 'package:vibeo/features/home/presentation/home_screen.dart';
+import 'package:vibeo/features/home/presentation/providers/discovery_providers.dart';
 import 'package:vibeo/features/video/domain/genre.dart';
 import 'package:vibeo/features/video/presentation/providers/video_providers.dart';
 
@@ -15,7 +16,6 @@ import '../../../helpers/fake_video_repository.dart';
 
 void main() {
   setUpAll(() {
-    // Évite tout accès réseau aux polices pendant les tests.
     GoogleFonts.config.allowRuntimeFetching = false;
   });
 
@@ -36,8 +36,9 @@ void main() {
         videoRepositoryProvider.overrideWithValue(
           videoRepo ?? FakeVideoRepository(),
         ),
+        trendingVideosProvider.overrideWith((ref) => const []),
+        recommendedVideosProvider.overrideWith((ref) => const []),
       ],
-      // Désactive la reprise exponentielle de Riverpod sur les erreurs.
       retry: (retryCount, error) => null,
     );
     addTearDown(container.dispose);
@@ -85,7 +86,6 @@ void main() {
 
       expect(find.text('Clip de démonstration'), findsOneWidget);
       expect(find.text('Deuxième clip'), findsOneWidget);
-      // Le filtre par genre est alimenté par la base, avec « Tous » en tête.
       expect(find.text('Tous'), findsOneWidget);
       expect(find.text('Afrobeats'), findsOneWidget);
       expect(tester.takeException(), isNull);

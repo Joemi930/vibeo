@@ -26,7 +26,7 @@ Tu es l'architecte et le chef d'équipe, pas le développeur de base :
 - **Riverpod** (état) · **go_router** (navigation + deep links)
 - **Supabase** : Postgres (RLS partout), Auth (email + Google), Storage,
   Edge Functions (Deno/TypeScript)
-- **video_player + chewie** (lecture) · **just_audio + audio_service** (audio
+- **video_player** (lecture ; `chewie` a été retiré, les contrôles sont maison) · **just_audio + audio_service** (audio
   arrière-plan)
 - **Compression 720p SUR L'APPAREIL** avant upload, jamais de transcodage
   serveur (budget 0 €). Plafond : **60 Mo / 4 min** par clip. Deux moteurs
@@ -48,7 +48,8 @@ flutter run -d chrome          # dev web
 flutter run                    # dev Android
 flutter analyze                # lint — doit passer sans erreur
 flutter test                   # tests unitaires + widgets
-flutter test integration_test  # tests d'intégration
+flutter test integration_test  # parcours bout en bout (local : émulateur ou
+                               # chromedriver requis, donc hors CI)
 dart format .                  # formatage
 supabase start                 # stack locale (Docker requis)
 supabase db diff -f <nom>      # générer une migration

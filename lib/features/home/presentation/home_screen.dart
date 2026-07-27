@@ -14,11 +14,18 @@ import '../../profile/presentation/providers/profile_providers.dart';
 import '../../video/domain/genre.dart';
 import '../../video/domain/video.dart';
 import '../../video/presentation/providers/video_providers.dart';
+import 'providers/discovery_providers.dart';
+import 'widgets/section_header.dart';
+import 'widgets/video_carousel.dart';
 
-/// Accueil : filtre par genre et fil « Nouveautés ».
+/// Accueil : tendances, recommandations, filtre par genre et « Nouveautés ».
 ///
 /// Seul écran sans bouton retour : c'est la racine de la navigation.
-/// Tendances et recommandations arrivent en Phase 5 — rien n'est simulé ici.
+///
+/// Les deux premières sections sont des carrousels horizontaux, « Nouveautés »
+/// reste la grille adaptative d'origine. Ce n'est pas une hésitation de
+/// conception : une grille montre un catalogue à parcourir, un carrousel montre
+/// une sélection. Les mêler serait perdre les deux.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -50,15 +57,63 @@ class HomeScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(publishedVideosProvider);
           ref.invalidate(genresProvider);
+          ref.invalidate(trendingVideosProvider);
+          ref.invalidate(recommendedVideosProvider);
         },
         child: CustomScrollView(
           slivers: [
             const SliverToBoxAdapter(child: _GenreFilterRow()),
+            const _DiscoverySection(
+              label: 'Tendances',
+              kind: _SectionKind.trending,
+            ),
+            const _DiscoverySection(
+              label: 'Recommandé pour toi',
+              kind: _SectionKind.recommended,
+            ),
             const SliverToBoxAdapter(child: _SectionTitle('Nouveautés')),
             _VideoFeedSliver(isArtist: profile?.isArtist ?? false),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+enum _SectionKind { trending, recommended }
+
+/// Une section de découverte : son titre et son carrousel, ou **rien du tout**.
+///
+/// L'ensemble titre + carrousel disparaît quand la liste est vide. Afficher un
+/// titre « Tendances » au-dessus du vide est pire que ne rien afficher : cela
+/// donne l'impression d'une panne alors que le catalogue est simplement jeune.
+class _DiscoverySection extends ConsumerWidget {
+  const _DiscoverySection({required this.label, required this.kind});
+
+  final String label;
+  final _SectionKind kind;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final provider = kind == _SectionKind.trending
+        ? trendingVideosProvider
+        : recommendedVideosProvider;
+    final videosAsync = ref.watch(provider);
+
+    final isEmpty = videosAsync.asData?.value.isEmpty ?? false;
+    if (isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+    return SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SectionHeader(label: label),
+          VideoCarousel(
+            videosAsync: videosAsync,
+            onRetry: () => ref.invalidate(provider),
+          ),
+        ],
       ),
     );
   }

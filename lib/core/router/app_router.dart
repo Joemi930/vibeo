@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/artist/presentation/application_status_screen.dart';
 import '../../features/artist/presentation/artist_screen.dart';
+import '../../features/artist/presentation/become_artist_screen.dart';
+import '../../features/artist/presentation/providers/artist_application_providers.dart';
 import '../../features/auth/domain/user_role.dart';
 import '../../features/auth/presentation/auth_screen.dart';
 import '../../features/auth/presentation/email_verification_screen.dart';
@@ -22,7 +25,7 @@ import '../../features/studio/presentation/edit_video_screen.dart';
 import '../../features/studio/presentation/studio_screen.dart';
 import '../../features/upload/presentation/upload_flow_screen.dart';
 import '../widgets/main_scaffold.dart';
-import '../widgets/placeholder_screen.dart';
+import '../../features/admin/presentation/admin_shell.dart';
 import 'app_routes.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -69,6 +72,33 @@ final routerProvider = Provider<GoRouter>((ref) {
           final role = ref.read(currentRoleProvider);
           if (role != null && role == UserRole.listener) {
             return AppRoutes.becomeArtist;
+          }
+        }
+
+        // Administration : même logique, rôle null = on laisse passer et
+        // `AdminShell` affiche son propre chargement puis un refus. Sans cette
+        // seconde couche côté écran, un utilisateur ordinaire verrait le
+        // dashboard clignoter avant d'être renvoyé.
+        if (loc.startsWith(AppRoutes.admin)) {
+          final role = ref.read(currentRoleProvider);
+          if (role != null && role != UserRole.admin) {
+            return AppRoutes.home;
+          }
+        }
+
+        // Candidature artiste : inutile de remplir le formulaire si un rôle
+        // artiste ou une candidature ouverte existe déjà. `asData?.value`
+        // reste `null` tant que la requête n'a pas répondu — l'écran affiche
+        // alors son propre chargement et refait la même vérification une
+        // fois les données arrivées (voir `BecomeArtistScreen`).
+        if (loc == AppRoutes.becomeArtist) {
+          final role = ref.read(currentRoleProvider);
+          if (role == UserRole.artist || role == UserRole.admin) {
+            return AppRoutes.studio;
+          }
+          final application = ref.read(myApplicationProvider).asData?.value;
+          if (application != null && application.status.isOpen) {
+            return AppRoutes.applicationStatus;
           }
         }
         return null;
@@ -182,30 +212,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             ArtistScreen(artistId: state.pathParameters['artistId']!),
       ),
-      // Squelettes navigables (implémentés dans les phases suivantes).
       GoRoute(
         path: AppRoutes.becomeArtist,
-        builder: (context, state) => const PlaceholderScreen(
-          title: 'Devenir artiste',
-          icon: Icons.verified_rounded,
-          phase: 'Phase 4',
-        ),
+        builder: (context, state) => const BecomeArtistScreen(),
       ),
       GoRoute(
         path: AppRoutes.applicationStatus,
-        builder: (context, state) => const PlaceholderScreen(
-          title: 'Statut de candidature',
-          icon: Icons.hourglass_top_rounded,
-          phase: 'Phase 4',
-        ),
+        builder: (context, state) => const ApplicationStatusScreen(),
       ),
       GoRoute(
         path: AppRoutes.admin,
-        builder: (context, state) => const PlaceholderScreen(
-          title: 'Administration',
-          icon: Icons.admin_panel_settings_rounded,
-          phase: 'Phase 6',
-        ),
+        builder: (context, state) => const AdminShell(),
       ),
     ],
   );
@@ -221,18 +238,26 @@ class _AuthRefreshNotifier extends ChangeNotifier {
     _guestSub = _ref.listen(guestModeProvider, (_, _) => notifyListeners());
     // Le rôle arrive après le profil : il faut réévaluer la garde du studio.
     _roleSub = _ref.listen(currentRoleProvider, (_, _) => notifyListeners());
+    // Idem pour la candidature artiste, résolue de façon asynchrone : la
+    // garde de `/become-artist` doit se réévaluer dès qu'elle arrive.
+    _applicationSub = _ref.listen(
+      myApplicationProvider,
+      (_, _) => notifyListeners(),
+    );
   }
 
   final Ref _ref;
   late final ProviderSubscription _authSub;
   late final ProviderSubscription _guestSub;
   late final ProviderSubscription _roleSub;
+  late final ProviderSubscription _applicationSub;
 
   @override
   void dispose() {
     _authSub.close();
     _guestSub.close();
     _roleSub.close();
+    _applicationSub.close();
     super.dispose();
   }
 }

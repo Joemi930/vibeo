@@ -63,10 +63,18 @@ final studioVideosProvider = FutureProvider.family<List<Video>, String>((
 });
 
 /// URL signée d'une miniature (les buckets sont privés).
+///
+/// `keepAlive` évite de re-signer la même URL à chaque reconstruction de
+/// widget : les URL signées sont valides une heure, et sans mémoïsation chaque
+/// retour sur l'accueil produisait de nouvelles signatures donc de nouveaux
+/// téléchargements.
 final thumbnailUrlProvider = FutureProvider.family<String?, String?>((
   ref,
   path,
 ) {
+  if (path != null && path.isNotEmpty) {
+    ref.keepAlive();
+  }
   return ref.watch(videoRepositoryProvider).signedThumbnailUrl(path);
 });
 

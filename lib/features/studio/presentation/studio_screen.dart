@@ -390,7 +390,12 @@ class _StudioVideoRow extends ConsumerWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              'Motif : ce clip a été retiré par la modération.',
+              // Motif réel écrit par la modération. Le repli générique ne sert
+              // plus que pour les clips retirés avant la Phase 4, qui n'ont
+              // aucun `moderation_result` : afficher un texte fixe à tout le
+              // monde revenait à ne rien expliquer, et l'artiste republiait le
+              // même contenu sans comprendre.
+              'Motif : ${video.moderationReason ?? 'ce clip a été retiré par la modération.'}',
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onErrorContainer,
               ),

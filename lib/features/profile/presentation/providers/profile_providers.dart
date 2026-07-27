@@ -23,6 +23,17 @@ final currentRoleProvider = Provider<UserRole?>((ref) {
   return ref.watch(currentProfileProvider).asData?.value?.role;
 });
 
+/// Vrai si l'utilisateur connecté est administrateur.
+///
+/// Comme [currentRoleProvider], ce n'est qu'un garde-fou d'interface : il évite
+/// d'afficher un dashboard vide et inerte à quelqu'un qui n'y a pas droit. La
+/// barrière réelle est ailleurs, et à deux niveaux — la RLS (`is_admin()` sur
+/// `moderation_logs`, `reports`, les vues d'administration) et la revérification
+/// du rôle côté serveur dans chaque Edge Function d'action admin.
+final isAdminProvider = Provider<bool>((ref) {
+  return ref.watch(currentProfileProvider).asData?.value?.isAdmin ?? false;
+});
+
 /// Profil public d'un autre utilisateur (page artiste).
 ///
 /// La lecture publique de `profiles` est ouverte depuis la Phase 2 : c'est ce

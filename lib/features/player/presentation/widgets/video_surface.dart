@@ -56,7 +56,16 @@ class VideoSurface extends ConsumerWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => const SizedBox.shrink(),
                 ),
-              if (isPlayingVideo) _VideoFrame(controller: videoController),
+              // La clé porte `engineGeneration` : `videoController` est un champ
+              // privé du contrôleur, invisible de `ref.watch`. Sans ce lien, le
+              // moteur reconstruit au retour du mode audio n'était pas remonté
+              // dans l'arbre et le lecteur restait sur la miniature — l'un des
+              // symptômes du bouton « Revenir à la vidéo » réputé inerte.
+              if (isPlayingVideo)
+                _VideoFrame(
+                  key: ValueKey<int>(playback.engineGeneration),
+                  controller: videoController,
+                ),
               const _DarkVeil(),
               Positioned(
                 top: 14,
@@ -64,7 +73,16 @@ class VideoSurface extends ConsumerWidget {
                 child: FloatingBackButton(fallbackRoute: '/'),
               ),
               if (playback.isAudioMode)
-                _AudioModeNotice(onReturnToVideo: controller.switchToVideo)
+                _AudioModeNotice(
+                  onReturnToVideo: () async {
+                    // `switchToVideo` est asynchrone et gère elle-même ses
+                    // erreurs, qu'elle publie dans l'état. Passée jadis comme
+                    // `VoidCallback`, elle était appelée sans être attendue :
+                    // toute panne devenait une erreur asynchrone non traitée,
+                    // le bandeau restait affiché, et le bouton paraissait mort.
+                    await controller.switchToVideo();
+                  },
+                )
               else if (playback.errorMessage != null)
                 _PlaybackError(
                   message: playback.errorMessage!,
@@ -116,7 +134,7 @@ class _MaybeRounded extends StatelessWidget {
 }
 
 class _VideoFrame extends StatelessWidget {
-  const _VideoFrame({required this.controller});
+  const _VideoFrame({required this.controller, super.key});
   final VideoPlayerController controller;
 
   @override
@@ -323,7 +341,10 @@ class _PlaybackErrorState extends State<_PlaybackError> {
 
 class _AudioModeNotice extends StatelessWidget {
   const _AudioModeNotice({required this.onReturnToVideo});
-  final VoidCallback onReturnToVideo;
+
+  /// Volontairement typé asynchrone : la bascule prend une à trois secondes et
+  /// peut échouer. Un `VoidCallback` avalait silencieusement l'échec.
+  final Future<void> Function() onReturnToVideo;
 
   @override
   Widget build(BuildContext context) {

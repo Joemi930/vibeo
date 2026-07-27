@@ -160,7 +160,16 @@ begin
   raise notice '✅ SUCCÈS : une vidéo processing n''est pas visible par un tiers.';
 end $$;
 
--- Dave publie sa vidéo.
+-- Dave tente de publier LUI-MÊME sa vidéo -- doit désormais échouer.
+--
+-- INVERSION DÉLIBÉRÉE par rapport à la version Phase 2/3 de ce test : cette
+-- section affirmait auparavant « l'artiste peut publier sa vidéo, published_at
+-- renseigné automatiquement ». Depuis 20260727010400_moderation_gate.sql
+-- (verrou de modération, Phase 4), c'est FAUX -- le client ne décide plus
+-- d'AUCUNE transition de statut, dans aucun sens (la règle Phase 3 ne
+-- bloquait que les transitions VERS un statut de modération ; elle est
+-- maintenant totale). Un test qui affirmerait encore l'ancien comportement
+-- masquerait une régression de sécurité au lieu de la détecter.
 reset role;
 set local role authenticated;
 select set_config(
@@ -170,19 +179,29 @@ select set_config(
 );
 
 do $$
-declare
-  v_published_at timestamptz;
 begin
-  update public.videos
-     set status = 'published'
-   where id = '11111111-1111-1111-1111-111111111111'
-  returning published_at into v_published_at;
-
-  if v_published_at is null then
-    raise exception 'ÉCHEC : published_at non renseigné après publication.';
-  end if;
-  raise notice '✅ SUCCÈS : l''artiste peut publier sa vidéo (published_at renseigné automatiquement).';
+  begin
+    update public.videos
+       set status = 'published'
+     where id = '11111111-1111-1111-1111-111111111111';
+    raise exception
+      'ÉCHEC : l''artiste a pu publier lui-même sa vidéo -- le statut devrait '
+      'être exclusivement réservé à la modération (moderate-video, service_role).';
+  exception
+    when insufficient_privilege then
+      raise notice
+        '✅ SUCCÈS : l''artiste ne peut pas publier lui-même sa vidéo (42501, '
+        'verrou de modération Phase 4).';
+  end;
 end $$;
+
+-- Publication simulée par moderate-video (service_role) : rôle `postgres`,
+-- exempté par le trigger, pose le statut ET published_at explicitement --
+-- le trigger ne le pose plus automatiquement pour les rôles exemptés.
+reset role;
+update public.videos
+   set status = 'published', published_at = now()
+ where id = '11111111-1111-1111-1111-111111111111';
 
 -- Charlie (tiers authentifié) voit maintenant la vidéo publiée.
 reset role;

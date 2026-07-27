@@ -24,6 +24,7 @@ class Video {
     this.commentCount = 0,
     this.publishedAt,
     this.artist,
+    this.moderationResult,
   });
 
   final String id;
@@ -50,10 +51,33 @@ class Video {
   /// Artiste joint à la requête, quand la sélection l'a demandé.
   final ArtistSummary? artist;
 
+  /// Verdict de modération, écrit exclusivement côté serveur.
+  ///
+  /// Structure : `state`, `reason`, `provider`, `confidence`, `at`. Le client
+  /// ne fait qu'y lire le motif à afficher à l'artiste — le trigger
+  /// `videos_guard_client_fields` restaure l'ancienne valeur à chaque mise à
+  /// jour cliente, faute de quoi un artiste sanctionné pourrait se réécrire
+  /// son propre motif de rejet.
+  final Map<String, dynamic>? moderationResult;
+
   Duration? get duration =>
       durationSeconds == null ? null : Duration(seconds: durationSeconds!);
 
   bool get isPublished => status.isPublished;
+
+  /// Motif de modération à montrer à l'artiste, s'il y en a un.
+  ///
+  /// Remplace le texte générique codé en dur du Studio : un artiste dont le
+  /// clip est refusé doit savoir pourquoi, sinon il republie la même chose.
+  String? get moderationReason {
+    final reason = moderationResult?['reason'];
+    return reason is String && reason.trim().isNotEmpty ? reason : null;
+  }
+
+  /// Le clip attend une décision de modération.
+  bool get isAwaitingModeration =>
+      status == VideoStatus.processing ||
+      status == VideoStatus.pendingModeration;
 
   /// Construit un [Video] depuis une ligne JSON de Supabase.
   ///
@@ -121,6 +145,9 @@ class Video {
       artist: artistJson is Map<String, dynamic>
           ? ArtistSummary.fromJson(artistJson)
           : null,
+      moderationResult: json['moderation_result'] is Map<String, dynamic>
+          ? json['moderation_result'] as Map<String, dynamic>
+          : null,
     );
   }
 
@@ -178,6 +205,7 @@ class Video {
       publishedAt: publishedAt ?? this.publishedAt,
       createdAt: createdAt,
       artist: artist ?? this.artist,
+      moderationResult: moderationResult,
     );
   }
 

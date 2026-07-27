@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/media_limits.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/verified_badge.dart';
 import '../../../core/widgets/vibeo_app_bar.dart';
@@ -80,6 +83,26 @@ class _AudioLoading extends StatelessWidget {
   }
 }
 
+/// Quitte le mode audio et revient au lecteur du clip [videoId].
+///
+/// La navigation est lancée **sans attendre** la bascule du moteur : celle-ci
+/// enchaîne une re-signature d'URL et l'initialisation du lecteur, soit une à
+/// trois secondes. L'attendre avant de dépiler laissait l'écran audio figé,
+/// sans le moindre retour visuel — et si la bascule échouait, on ne quittait
+/// jamais l'écran. Le lecteur, lui, sait afficher un chargement puis une erreur.
+///
+/// Le repli est explicite : sur le web, un lien direct ou un simple
+/// rechargement de page laisse une pile de navigation à une seule route, et
+/// `popOrGo` sans repli renvoie alors à l'accueil au lieu du clip.
+void returnToVideo(
+  BuildContext context,
+  PlaybackController controller,
+  String videoId,
+) {
+  unawaited(controller.switchToVideo());
+  VibeoAppBar.popOrGo(context, AppRoutes.video(videoId));
+}
+
 class _AudioContent extends ConsumerWidget {
   const _AudioContent({required this.playback});
 
@@ -96,7 +119,9 @@ class _AudioContent extends ConsumerWidget {
 
     return Column(
       children: [
-        const _AudioHeader(),
+        _AudioHeader(
+          onCollapse: () => returnToVideo(context, controller, video.id),
+        ),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 30),
@@ -115,10 +140,7 @@ class _AudioContent extends ConsumerWidget {
                 _Transport(playback: playback, controller: controller),
                 const SizedBox(height: 26),
                 _BackToVideoButton(
-                  onPressed: () async {
-                    await controller.switchToVideo();
-                    if (context.mounted) VibeoAppBar.popOrGo(context);
-                  },
+                  onPressed: () => returnToVideo(context, controller, video.id),
                 ),
                 const SizedBox(height: 30),
                 const Align(
@@ -136,7 +158,13 @@ class _AudioContent extends ConsumerWidget {
 }
 
 class _AudioHeader extends StatelessWidget {
-  const _AudioHeader();
+  const _AudioHeader({required this.onCollapse});
+
+  /// Le chevron fait exactement la même chose que le bouton « Revenir à la
+  /// vidéo ». Il dépilait auparavant **sans** repasser en mode vidéo : on
+  /// retombait sur le lecteur avec le moteur audio toujours actif et aucune
+  /// image, ce qui donnait l'impression d'un second bouton cassé.
+  final VoidCallback onCollapse;
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +175,7 @@ class _AudioHeader extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: () => VibeoAppBar.popOrGo(context),
+            onPressed: onCollapse,
             tooltip: 'Réduire',
             icon: const Icon(Icons.expand_more_rounded, size: 28),
           ),

@@ -415,3 +415,32 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# ─── Edge Functions ──────────────────────────────────────────────────────────
+#
+# Par défaut, le runtime exige un JWT valide sur chaque appel. C'est le bon
+# réglage pour tout ce qui est déclenché par un utilisateur. Deux fonctions font
+# exception : elles sont appelées par le planificateur (pg_cron via pg_net), qui
+# n'a pas de session utilisateur.
+#
+# Elles ne sont pas pour autant ouvertes : chacune vérifie un secret partagé
+# (`x-vibeo-cron-secret`) par comparaison à temps constant, et répond 404 — et
+# non 403 — à qui ne le présente pas, pour ne pas confirmer son existence.
+
+[functions.verify-artist]
+verify_jwt = true
+
+[functions.admin-actions]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
+
+[functions.purge-identity-docs]
+verify_jwt = false
+
+# `moderate-video` sert deux publics : l'artiste qui vient de publier (avec son
+# JWT, vérifié dans le code) et la reprise planifiée (avec le secret partagé).
+# La vérification est donc faite dans la fonction, branche par branche.
+[functions.moderate-video]
+verify_jwt = false

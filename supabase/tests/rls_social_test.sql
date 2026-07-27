@@ -69,7 +69,14 @@ values
 update public.profiles set role = 'artist' where id = 'c0000000-0000-0000-0000-00000000000c';
 update public.profiles set role = 'admin'  where id = 'd0000000-0000-0000-0000-00000000000d';
 
--- Deux clips publiés de l'artiste C.
+-- Deux clips de l'artiste C, publiés par la voie normale depuis
+-- 20260727010400_moderation_gate.sql (verrou de modération, Phase 4) : le
+-- client ne peut plus créer directement en `published`, seul `processing`
+-- est autorisé. On insère donc en `processing` sous le rôle applicatif, puis
+-- on simule la décision de `moderate-video` (service_role) au niveau
+-- supérieur avec `reset role` (rôle `postgres`, exempté par le trigger) --
+-- en posant `published_at` explicitement, comme le ferait cette fonction :
+-- le trigger ne le pose pas pour les rôles exemptés.
 reset role;
 set local role authenticated;
 select set_config(
@@ -84,7 +91,7 @@ values (
   'c0000000-0000-0000-0000-00000000000c',
   'Clip social 1',
   'c0000000-0000-0000-0000-00000000000c/clip1.mp4',
-  60, 1000000, 'published'
+  60, 1000000, 'processing'
 );
 
 insert into public.videos (id, artist_id, title, video_path, duration_seconds, size_bytes, status)
@@ -93,8 +100,16 @@ values (
   'c0000000-0000-0000-0000-00000000000c',
   'Clip social 2',
   'c0000000-0000-0000-0000-00000000000c/clip2.mp4',
-  60, 1000000, 'published'
+  60, 1000000, 'processing'
 );
+
+-- Publication simulée (service_role) : c'est le rôle postgres, exempté, qui
+-- pose ici le statut ET published_at, exactement comme le ferait
+-- moderate-video.
+reset role;
+update public.videos
+   set status = 'published', published_at = now()
+ where id in ('e0000000-0000-0000-0000-00000000000e', 'e0000000-0000-0000-0000-00000000000f');
 
 -- ---------------------------------------------------------------------------
 -- 1) Double like du même utilisateur -> le 2nd échoue, like_count reste à 1.
