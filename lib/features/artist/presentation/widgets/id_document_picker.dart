@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../../upload/data/thumbnail_picker.dart';
-import '../../../upload/data/video_picker.dart' show PickerException;
 
 /// Sélecteur de pièce d'identité pour la candidature artiste.
 ///
@@ -42,8 +41,14 @@ class IdDocumentPicker extends StatelessWidget {
       final picked = await pickThumbnailImage(maxBytes: _maxDocumentBytes);
       if (picked == null) return;
       onPick(picked);
-    } on PickerException catch (e) {
-      onError(e.message);
+    } catch (e) {
+      // `on PickerException` était insuffisant : sur le web, l'import
+      // conditionnel de `video_picker.dart` empêche parfois le type d'être
+      // résolu au runtime, et `image_picker` peut lever d'autres exceptions
+      // (pont JS saturé pour une photo trop lourde, format non géré, etc.).
+      // Un `catch` générique garantit qu'aucune erreur ne reste silencieuse.
+      final message = e is Exception ? e.toString() : 'Fichier invalide.';
+      onError(message);
     }
   }
 

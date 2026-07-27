@@ -312,10 +312,19 @@ class UploadController extends Notifier<UploadState> {
   /// comme échoué.
   Future<bool> _requestModeration(String videoId) async {
     try {
-      await ref
+      final response = await ref
           .read(supabaseClientProvider)
           .functions
           .invoke('moderate-video', body: {'videoId': videoId});
+      // Le SDK `supabase_flutter` ne lève PAS d'exception sur les 4xx/5xx :
+      // il retourne un `FunctionsResponse` avec `.status` et `.data`. Sans
+      // cette vérification, un 404 (fonction non déployée) ou un 500 (clé IA
+      // absente) étaient avalés silencieusement et le clip restait bloqué en
+      // `processing` sans que rien ni personne ne le signale.
+      if (response.status != 200) {
+        logError('moderate-video a répondu ${response.status}', response.data);
+        return false;
+      }
       return true;
     } catch (error) {
       logError('demande de vérification impossible', error);

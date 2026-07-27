@@ -210,7 +210,19 @@ class PlaybackController extends Notifier<PlaybackState> {
     // Le listener n'est branché qu'ici, après le rattrapage du refus : posé
     // avant, il aurait publié l'erreur d'autoplay dans l'état avant qu'on ait
     // eu la chance de la corriger.
-    controller.addListener(_onVideoTick);
+    //
+    // Une micro-pause avant `addListener` évite la condition de course avec le
+    // stream interne du contrôleur : `video_player` refuse un `addListener`
+    // quand un événement est en cours de traitement (« You cannot add items
+    // while items are being added from addStream »). C'est exactement ce qui
+    // arrivait au retour du mode audio, où le contrôleur est neuf et son stream
+    // encore actif de `initialize()` + `play()`.
+    try {
+      controller.addListener(_onVideoTick);
+    } catch (_) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      controller.addListener(_onVideoTick);
+    }
 
     state = state.copyWith(
       mode: PlaybackMode.video,

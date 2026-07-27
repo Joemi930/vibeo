@@ -63,6 +63,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (loggedIn) {
+        // Comptes d'administration : cantonnés au dashboard. Un admin qui
+        // arrive sur l'accueil ou toute autre route est redirigé vers /admin.
+        // Quand le rôle vaut encore null (profil non chargé), on laisse passer
+        // — `AdminShell` affiche son propre chargement et la redirection sera
+        // rejouée au rafraîchissement via `_AuthRefreshNotifier`.
+        final role = ref.read(currentRoleProvider);
+        if (role == UserRole.admin && !loc.startsWith(AppRoutes.admin)) {
+          return AppRoutes.admin;
+        }
+
         // Studio et upload : réservés aux artistes. Tant que le profil n'est
         // pas chargé (rôle null), on laisse passer — l'écran affiche son propre
         // état de chargement et la redirection se fera au rafraîchissement.
