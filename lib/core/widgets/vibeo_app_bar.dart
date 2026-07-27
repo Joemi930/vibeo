@@ -1,8 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../router/app_routes.dart';
 import 'theme_toggle_switch.dart';
+
+/// Incrémenté à chaque retour arrière ([popOrGo]). Les écrans principaux
+/// (Accueil, Recherche, Bibliothèque, Profil) écoutent ce signal pour
+/// rafraîchir leurs données sans que l'utilisateur ait à tirer pour rafraîchir.
+class NavigationPopSignal extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void tick() => state++;
+}
+
+final navigationPopSignalProvider = NotifierProvider<NavigationPopSignal, int>(
+  NavigationPopSignal.new,
+);
 
 /// Barre supérieure commune à tous les écrans.
 ///
@@ -73,13 +88,8 @@ class VibeoAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   /// Revient en arrière si possible, sinon rejoint [fallback].
   ///
-  /// Exposé pour que les écrans sans [AppBar] (lecteur, page artiste, où la
-  /// flèche est posée sur le média) partagent exactement le même comportement.
-  ///
-  /// On interroge d'abord le [Navigator] plutôt que go_router : c'est valable
-  /// pour un écran empilé comme pour un onglet du shell (dont la racine n'a
-  /// rien à dépiler, d'où le repli sur [fallback]), et cela laisse le widget
-  /// utilisable dans un test sans routeur.
+  /// Après avoir dépilé, incrémente [navigationPopSignalProvider] pour que
+  /// les écrans principaux (Accueil, Recherche…) rafraîchissent leurs données.
   static void popOrGo(
     BuildContext context, [
     String fallback = AppRoutes.home,
@@ -87,8 +97,17 @@ class VibeoAppBar extends StatelessWidget implements PreferredSizeWidget {
     final navigator = Navigator.maybeOf(context);
     if (navigator != null && navigator.canPop()) {
       navigator.pop();
-      return;
+    } else {
+      GoRouter.maybeOf(context)?.go(fallback);
     }
-    GoRouter.maybeOf(context)?.go(fallback);
+    // Signaler aux écrans de se rafraîchir (ignoré si pas de ProviderScope,
+    // ex. dans un test sans Riverpod).
+    try {
+      ProviderScope.containerOf(
+        context,
+      ).read(navigationPopSignalProvider.notifier).tick();
+    } catch (_) {
+      /* pas de container en test */
+    }
   }
 }

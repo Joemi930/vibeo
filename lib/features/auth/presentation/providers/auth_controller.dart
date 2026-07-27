@@ -122,14 +122,16 @@ class AuthController extends AsyncNotifier<void> {
   static String _mapMessage(AuthException e) {
     final msg = e.message.toLowerCase();
     if (msg.contains('invalid login credentials')) {
-      return 'Email ou mot de passe incorrect.';
+      return 'Email ou mot de passe incorrect. Si tu as créé ton compte '
+          'avec Google, utilise le bouton « Se connecter avec Google ».';
     }
     if (msg.contains('email not confirmed')) {
       return 'Confirme d\'abord ton email via le lien reçu.';
     }
     if (msg.contains('user already registered') ||
         msg.contains('already been registered')) {
-      return 'Un compte existe déjà avec cet email.';
+      return 'Un compte existe déjà avec cet email. Si tu l\'as créé avec '
+          'Google, connecte-toi avec le bouton « Se connecter avec Google ».';
     }
     if (msg.contains('password') && msg.contains('should be')) {
       return 'Le mot de passe est trop court (6 caractères minimum).';

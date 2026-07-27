@@ -44,7 +44,11 @@ void main() {
     expect(ok, isFalse);
     final state = container.read(authControllerProvider);
     expect(state.hasError, isTrue);
-    expect(state.error.toString(), 'Email ou mot de passe incorrect.');
+    expect(
+      state.error.toString(),
+      'Email ou mot de passe incorrect. Si tu as créé ton compte '
+      'avec Google, utilise le bouton « Se connecter avec Google ».',
+    );
   });
 
   test('signUp → indique qu\'une confirmation email est requise', () async {
@@ -76,7 +80,8 @@ void main() {
     expect(outcome, isNull);
     expect(
       container.read(authControllerProvider).error.toString(),
-      'Un compte existe déjà avec cet email.',
+      'Un compte existe déjà avec cet email. Si tu l\'as créé avec '
+      'Google, connecte-toi avec le bouton « Se connecter avec Google ».',
     );
   });
 }

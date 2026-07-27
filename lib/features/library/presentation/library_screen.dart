@@ -5,6 +5,7 @@ import '../../../core/auth/require_auth.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/vibeo_app_bar.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
+import 'providers/library_providers.dart';
 import 'widgets/history_tab.dart';
 import 'widgets/playlists_tab.dart';
 import 'widgets/subscriptions_tab.dart';
@@ -36,6 +37,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final isAuthenticated = ref.watch(isAuthenticatedProvider);
+
+    ref.listen(navigationPopSignalProvider, (_, _) {
+      ref.invalidate(myPlaylistsProvider);
+      ref.invalidate(watchHistoryProvider);
+    });
 
     if (!isAuthenticated) {
       return Scaffold(

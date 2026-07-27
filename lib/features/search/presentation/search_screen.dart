@@ -19,6 +19,11 @@ class SearchScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tab = ref.watch(searchTabProvider);
 
+    ref.listen(navigationPopSignalProvider, (_, _) {
+      ref.invalidate(videoResultsProvider);
+      ref.invalidate(artistResultsProvider);
+    });
+
     return Scaffold(
       appBar: const VibeoAppBar(title: 'Recherche'),
       body: Column(

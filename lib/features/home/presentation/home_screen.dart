@@ -34,6 +34,14 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentProfileProvider).asData?.value;
 
+    // Rafraîchir les données quand l'utilisateur revient sur l'accueil
+    // via le bouton retour d'un écran empilé (lecteur, artiste…).
+    ref.listen(navigationPopSignalProvider, (_, _) {
+      ref.invalidate(publishedVideosProvider);
+      ref.invalidate(trendingVideosProvider);
+      ref.invalidate(recommendedVideosProvider);
+    });
+
     return Scaffold(
       appBar: VibeoAppBar(
         titleWidget: const _VibeoWordmark(),

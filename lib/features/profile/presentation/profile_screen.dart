@@ -21,6 +21,10 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
 
+    ref.listen(navigationPopSignalProvider, (_, _) {
+      ref.invalidate(currentProfileProvider);
+    });
+
     return Scaffold(
       appBar: VibeoAppBar(
         title: 'Profil',
