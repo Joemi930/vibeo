@@ -133,17 +133,17 @@ class _ReportsTable extends ConsumerWidget {
               children: [
                 FilledButton(
                   onPressed: () =>
-                      _resolveReport(rowContext, ref, report, 'reviewed'),
+                      _resolveReport(rowContext, ref, report, 'remove_content'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     minimumSize: const Size(0, 36),
                   ),
-                  child: const Text('Traiter'),
+                  child: const Text('Retirer'),
                 ),
                 const SizedBox(width: 6),
                 OutlinedButton(
                   onPressed: () =>
-                      _resolveReport(rowContext, ref, report, 'dismissed'),
+                      _resolveReport(rowContext, ref, report, 'dismiss'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     minimumSize: const Size(0, 36),
@@ -170,20 +170,18 @@ class _ReportsTable extends ConsumerWidget {
     AdminReport report,
     String resolution,
   ) async {
-    final isDismiss = resolution == 'dismissed';
+    final isDismiss = resolution == 'dismiss';
 
     final result = await showConfirmActionDialog(
       context: context,
-      title: isDismiss
-          ? 'Ignorer ce signalement ?'
-          : 'Traiter ce signalement ?',
+      title: isDismiss ? 'Ignorer ce signalement ?' : 'Retirer ce contenu ?',
       message: isDismiss
           ? 'Le contenu restera visible et le signalement sera marqué comme rejeté.'
-          : 'Confirme le traitement de ce signalement.',
-      confirmLabel: isDismiss ? 'Ignorer' : 'Traiter',
-      isDestructive: isDismiss,
+          : 'Le contenu signalé sera retiré de la plateforme.',
+      confirmLabel: isDismiss ? 'Ignorer' : 'Retirer le contenu',
+      isDestructive: !isDismiss,
       requireReason: true,
-      reasonLabel: isDismiss ? 'Justification' : 'Note de résolution',
+      reasonLabel: isDismiss ? 'Justification' : 'Motif du retrait',
     );
 
     if (!result.confirmed || !context.mounted) return;

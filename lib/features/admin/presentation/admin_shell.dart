@@ -258,6 +258,15 @@ class _AdminSidebar extends ConsumerWidget {
 
           const Spacer(),
 
+          // Paramètres
+          _NavItem(
+            icon: Icons.settings_rounded,
+            label: 'Paramètres',
+            isSelected: false,
+            onTap: () => GoRouter.of(context).push('/settings'),
+          ),
+          const SizedBox(height: 8),
+
           // Jauge de stockage
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 20),
@@ -387,6 +396,18 @@ class _AdminDrawer extends ConsumerWidget {
 
             const Spacer(),
 
+            // Paramètres
+            _NavItem(
+              icon: Icons.settings_rounded,
+              label: 'Paramètres',
+              isSelected: false,
+              onTap: () {
+                Navigator.pop(context);
+                GoRouter.of(context).push('/settings');
+              },
+            ),
+            const SizedBox(height: 8),
+
             // Jauge de stockage
             Padding(
               padding: const EdgeInsets.all(16),
@@ -431,12 +452,19 @@ class _MobileHeader extends StatelessWidget {
             tooltip: 'Menu',
           ),
           const SizedBox(width: 4),
-          Text(
-            _tabTitle(currentTab),
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.01,
+          Expanded(
+            child: Text(
+              _tabTitle(currentTab),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.01,
+              ),
             ),
+          ),
+          IconButton(
+            onPressed: () => GoRouter.of(context).push('/settings'),
+            icon: const Icon(Icons.settings_rounded),
+            tooltip: 'Paramètres',
           ),
         ],
       ),

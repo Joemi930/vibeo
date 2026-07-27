@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/supabase/supabase_providers.dart';
 import '../../../../core/utils/dev_log.dart';
 
 import '../../../video/domain/video.dart';
@@ -37,7 +36,6 @@ class UploadState {
     this.progress = 0,
     this.errorMessage,
     this.published,
-    this.moderationRequested = true,
   });
 
   final UploadStep step;
@@ -53,14 +51,6 @@ class UploadState {
 
   /// Clip envoyé, disponible une fois l'étape [UploadStep.done] atteinte.
   final Video? published;
-
-  /// La vérification automatique a bien été demandée.
-  ///
-  /// À faux, le clip est en ligne mais personne ne l'a encore examiné : l'écran
-  /// de confirmation propose alors de relancer. Sans ce drapeau, un artiste
-  /// verrait « Envoi terminé » puis un clip qui ne sort jamais de l'attente,
-  /// sans comprendre pourquoi.
-  final bool moderationRequested;
 
   bool get isBusy =>
       step == UploadStep.compressing || step == UploadStep.sending;
@@ -83,7 +73,6 @@ class UploadState {
     double? progress,
     String? errorMessage,
     Video? published,
-    bool? moderationRequested,
     bool clearError = false,
     bool clearThumbnail = false,
   }) {
@@ -95,7 +84,6 @@ class UploadState {
       progress: progress ?? this.progress,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       published: published ?? this.published,
-      moderationRequested: moderationRequested ?? this.moderationRequested,
     );
   }
 }
@@ -217,6 +205,8 @@ class UploadController extends Notifier<UploadState> {
   ///
   /// Le serveur reste seul juge : il refuse si l'appelant n'est pas artiste ou
   /// s'il a dépassé son quota de 5 publications sur 24 h.
+  ///
+  /// Phase 7 : la vérification IA est retirée, le clip est publié directement.
   Future<bool> publish({
     required String artistId,
     required String title,
@@ -233,8 +223,6 @@ class UploadController extends Notifier<UploadState> {
     );
 
     final repo = ref.read(videoRepositoryProvider);
-    // Identifiant tiré côté client pour nommer les fichiers avant d'insérer la
-    // ligne : le chemin doit commencer par l'uid de l'artiste (RLS storage).
     final videoId = _newId();
 
     try {
@@ -270,19 +258,9 @@ class UploadController extends Notifier<UploadState> {
         thumbnailPath: thumbnailPath,
         durationSeconds: compressed.durationSeconds,
         sizeBytes: compressed.sizeBytes,
-        // Depuis la Phase 4, c'est le SEUL statut que la base accepte à la
-        // création : le trigger `videos_guard_client_fields` refuse tout le
-        // reste. Un clip naît invisible et ne devient public que par la
-        // modération, ci-dessous.
-        status: VideoStatus.processing,
+        // Phase 7 : le clip est publié directement, sans vérification IA.
+        status: VideoStatus.published,
       );
-
-      // La vérification est demandée tout de suite. Son échec n'est pas
-      // fatal : le clip reste en attente et sera repris, soit par le bouton
-      // « Relancer la vérification » du Studio, soit par la reprise planifiée.
-      // Bloquer l'envoi ici ferait croire à l'artiste que sa publication a
-      // échoué alors que son fichier est bien arrivé.
-      final moderationRequested = await _requestModeration(video.id);
 
       ref.invalidate(publishedVideosProvider);
       ref.invalidate(studioVideosProvider);
@@ -291,7 +269,6 @@ class UploadController extends Notifier<UploadState> {
         step: UploadStep.done,
         progress: 1,
         published: video,
-        moderationRequested: moderationRequested,
       );
       return true;
     } catch (error, stack) {
@@ -302,44 +279,6 @@ class UploadController extends Notifier<UploadState> {
       );
       return false;
     }
-  }
-
-  /// Demande la vérification automatique d'un clip fraîchement envoyé.
-  ///
-  /// Renvoie `false` si l'appel n'a pas abouti — l'écran de confirmation
-  /// propose alors de relancer. Ne lève jamais : à ce stade le fichier est
-  /// déjà en ligne et la ligne créée, il serait faux de présenter l'envoi
-  /// comme échoué.
-  Future<bool> _requestModeration(String videoId) async {
-    try {
-      final response = await ref
-          .read(supabaseClientProvider)
-          .functions
-          .invoke('moderate-video', body: {'videoId': videoId});
-      // Le SDK `supabase_flutter` ne lève PAS d'exception sur les 4xx/5xx :
-      // il retourne un `FunctionsResponse` avec `.status` et `.data`. Sans
-      // cette vérification, un 404 (fonction non déployée) ou un 500 (clé IA
-      // absente) étaient avalés silencieusement et le clip restait bloqué en
-      // `processing` sans que rien ni personne ne le signale.
-      if (response.status != 200) {
-        logError('moderate-video a répondu ${response.status}', response.data);
-        return false;
-      }
-      return true;
-    } catch (error) {
-      logError('demande de vérification impossible', error);
-      return false;
-    }
-  }
-
-  /// Relance la vérification d'un clip resté en attente.
-  Future<bool> retryModeration(String videoId) async {
-    final ok = await _requestModeration(videoId);
-    if (ok) {
-      ref.invalidate(studioVideosProvider);
-      state = state.copyWith(moderationRequested: true);
-    }
-    return ok;
   }
 
   /// Traduit les refus du serveur en messages compréhensibles.

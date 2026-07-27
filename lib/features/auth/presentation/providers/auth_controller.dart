@@ -95,15 +95,20 @@ class AuthController extends AsyncNotifier<void> {
     }
   }
 
-  /// Déconnexion. Invalide aussi le profil en cache : sans cela, un compte
-  /// admin qui se déconnecte laisse son rôle en mémoire, et l'utilisateur
-  /// suivant qui se connecte avec un compte standard voit encore le dashboard
-  /// le temps que le profil soit rechargé.
+  /// Déconnexion. Invalide le profil EN PREMIER, avant d'appeler Supabase :
+  /// `_repo.signOut()` déclenche `authStateChangesProvider` qui notifie le
+  /// routeur. Si le profil n'est pas déjà invalidé à ce moment-là, le routeur
+  /// lit l'ancien rôle admin en cache et redirige le nouvel utilisateur vers
+  /// le dashboard.
   Future<void> signOut() async {
     state = const AsyncLoading();
     try {
-      await _repo.signOut();
+      // ORDRE CRITIQUE : invalider AVANT la déconnexion. `signOut()` émet un
+      // événement `authStateChanges` qui réveille le routeur ; si le profil
+      // est encore en cache à cet instant, le prochain utilisateur qui se
+      // connecte hérite du rôle admin du précédent.
       ref.invalidate(currentProfileProvider);
+      await _repo.signOut();
       state = const AsyncData(null);
     } catch (e, st) {
       state = AsyncError(_genericError, st);
