@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/admin_application.dart';
 import '../domain/admin_report.dart';
 import '../domain/admin_stats.dart';
+import '../domain/admin_user.dart';
 import '../domain/admin_video_queue.dart';
 import '../domain/moderation_log.dart';
 
@@ -57,6 +58,15 @@ abstract class AdminRepository {
     required String resolution,
     String? reason,
   });
+
+  /// Liste des utilisateurs (vue `admin_users`, admin uniquement).
+  Future<List<AdminUser>> fetchUsers();
+
+  /// Change le rôle d'un utilisateur (listener, artist, admin).
+  Future<void> changeUserRole({required String userId, required String role});
+
+  /// Supprime définitivement un compte utilisateur.
+  Future<void> deleteUser({required String userId, String? reason});
 }
 
 /// Implémentation Supabase de [AdminRepository].
@@ -268,6 +278,39 @@ class SupabaseAdminRepository implements AdminRepository {
     } on FunctionException catch (e) {
       throw AdminActionException(_messageFor(e));
     }
+  }
+
+  @override
+  Future<List<AdminUser>> fetchUsers() async {
+    final rows = await _client
+        .from('admin_users')
+        .select()
+        .order('created_at', ascending: false);
+    return (rows as List)
+        .map((r) => AdminUser.fromJson(r as Map<String, dynamic>))
+        .toList();
+  }
+
+  @override
+  Future<void> changeUserRole({
+    required String userId,
+    required String role,
+  }) async {
+    await _invoke({
+      'action': 'change_user_role',
+      'userId': userId,
+      'role': role,
+    });
+  }
+
+  @override
+  Future<void> deleteUser({required String userId, String? reason}) async {
+    await _invoke({
+      'action': 'delete_user',
+      'userId': userId,
+      // ignore: use_null_aware_elements
+      if (reason != null) 'reason': reason,
+    });
   }
 
   String _messageFor(FunctionException e) {

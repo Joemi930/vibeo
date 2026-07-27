@@ -6,6 +6,7 @@ import '../../data/admin_repository.dart';
 import '../../domain/admin_application.dart';
 import '../../domain/admin_report.dart';
 import '../../domain/admin_stats.dart';
+import '../../domain/admin_user.dart';
 import '../../domain/admin_video_queue.dart';
 import '../../domain/moderation_log.dart';
 
@@ -40,6 +41,10 @@ final adminLogsProvider =
       return ref.watch(adminRepositoryProvider).fetchLogs(filter: filter);
     });
 
+final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) {
+  return ref.watch(adminRepositoryProvider).fetchUsers();
+});
+
 /// Onglet courant du dashboard, dérivé de `?tab=` par [AdminShell] et relu
 /// par les widgets qui doivent, par exemple, fermer le panneau d'examen en
 /// changeant d'onglet.
@@ -47,6 +52,7 @@ enum AdminTab {
   applications('applications'),
   moderation('moderation'),
   reports('reports'),
+  users('users'),
   stats('stats'),
   logs('logs');
 
@@ -126,6 +132,26 @@ class AdminActionController extends Notifier<bool> {
     ref.invalidate(adminReportsProvider);
     ref.invalidate(adminStatsProvider);
   });
+
+  Future<String?> changeUserRole({
+    required String userId,
+    required String role,
+  }) => _run(() async {
+    await ref
+        .read(adminRepositoryProvider)
+        .changeUserRole(userId: userId, role: role);
+    ref.invalidate(adminUsersProvider);
+    ref.invalidate(adminStatsProvider);
+  });
+
+  Future<String?> deleteUser({required String userId, String? reason}) =>
+      _run(() async {
+        await ref
+            .read(adminRepositoryProvider)
+            .deleteUser(userId: userId, reason: reason);
+        ref.invalidate(adminUsersProvider);
+        ref.invalidate(adminStatsProvider);
+      });
 
   Future<String?> _run(Future<void> Function() action) async {
     if (state) return null;

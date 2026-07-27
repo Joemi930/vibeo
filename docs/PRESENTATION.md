@@ -78,10 +78,11 @@ Vercel · Gemini IA
 
 | Fonctionnalité | Description |
 |---|---|
-| **Dashboard** | Sidebar 5 onglets : Candidatures, Modération, Signalements, Stats, Journal |
+| **Dashboard** | Sidebar 6 onglets : Candidatures, Modération, Signalements, Utilisateurs, Stats, Journal |
 | **Candidatures** | Examen et décision (approuver/rejeter) |
 | **Modération vidéos** | File d'attente des clips, retrait manuel |
 | **Signalements** | Traitement priorisé (score automatique) : retirer le contenu ou ignorer |
+| **Utilisateurs** | Liste des comptes, changement de rôle, suppression définitive |
 | **Statistiques** | Utilisateurs, artistes, clips, vues, stockage utilisé |
 | **Journal** | Historique complet des actions de modération |
 
@@ -127,9 +128,10 @@ Vercel · Gemini IA
 9. **Devenir artiste** — Remplis le formulaire de candidature
 10. **Studio** — Upload un clip vidéo (Android uniquement)
 11. **Paramètres** — Change le thème clair/sombre
-12. **Dashboard admin** — Connecte-toi en admin, explore les 5 onglets
-13. **Signalement** — Signale un clip, puis traite-le depuis le dashboard admin
-14. **Déconnexion** — Déconnecte-toi, reconnecte-toi avec un autre compte
+12. **Dashboard admin** — Connecte-toi en admin, explore les 6 onglets
+13. **Gestion utilisateurs** — Change le rôle d'un compte, crée un admin test
+14. **Signalement** — Signale un clip, puis traite-le depuis le dashboard admin
+15. **Déconnexion** — Déconnecte-toi, reconnecte-toi avec un autre compte
 
 ### URLs
 

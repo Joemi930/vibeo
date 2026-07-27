@@ -9,6 +9,7 @@ import 'tabs/applications_tab.dart';
 import 'tabs/logs_tab.dart';
 import 'tabs/reports_tab.dart';
 import 'tabs/stats_tab.dart';
+import 'tabs/users_tab.dart';
 import 'tabs/video_moderation_tab.dart';
 import 'widgets/storage_gauge.dart';
 
@@ -141,6 +142,7 @@ class _AdminShellState extends ConsumerState<AdminShell> {
       AdminTab.applications => const ApplicationsTab(),
       AdminTab.moderation => const VideoModerationTab(),
       AdminTab.reports => const ReportsTab(),
+      AdminTab.users => const UsersTab(),
       AdminTab.stats => const StatsTab(),
       AdminTab.logs => const LogsTab(),
     };
@@ -242,6 +244,13 @@ class _AdminSidebar extends ConsumerWidget {
             isSelected: currentTab == AdminTab.reports,
             badge: _queueCount(statsAsync, (s) => s.openReportCount),
             onTap: () => onTabSelected(AdminTab.reports),
+          ),
+          _NavItem(
+            icon: Icons.people_rounded,
+            label: 'Utilisateurs',
+            isSelected: currentTab == AdminTab.users,
+            badge: _queueCount(statsAsync, (s) => s.userCount),
+            onTap: () => onTabSelected(AdminTab.users),
           ),
           _NavItem(
             icon: Icons.bar_chart_rounded,
@@ -376,6 +385,16 @@ class _AdminDrawer extends ConsumerWidget {
               },
             ),
             _NavItem(
+              icon: Icons.people_rounded,
+              label: 'Utilisateurs',
+              isSelected: currentTab == AdminTab.users,
+              badge: _queueCount(statsAsync, (s) => s.userCount),
+              onTap: () {
+                onTabSelected(AdminTab.users);
+                Navigator.pop(context);
+              },
+            ),
+            _NavItem(
               icon: Icons.bar_chart_rounded,
               label: 'Statistiques',
               isSelected: currentTab == AdminTab.stats,
@@ -476,6 +495,7 @@ class _MobileHeader extends StatelessWidget {
       AdminTab.applications => 'Candidatures artistes',
       AdminTab.moderation => 'Modération vidéos',
       AdminTab.reports => 'Signalements',
+      AdminTab.users => 'Utilisateurs',
       AdminTab.stats => 'Statistiques',
       AdminTab.logs => 'Journal',
     };

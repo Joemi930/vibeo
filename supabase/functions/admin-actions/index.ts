@@ -63,6 +63,16 @@ const requestSchema = z.discriminatedUnion('action', [
     resolution: z.enum(['remove_content', 'warn_author', 'dismiss']),
     reason: z.string().trim().max(500).optional(),
   }).strict(),
+  z.object({
+    action: z.literal('change_user_role'),
+    userId: z.string().uuid(),
+    role: z.enum(['listener', 'artist', 'admin']),
+  }).strict(),
+  z.object({
+    action: z.literal('delete_user'),
+    userId: z.string().uuid(),
+    reason: z.string().trim().max(500).optional(),
+  }).strict(),
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -306,6 +316,63 @@ Deno.serve(async (req: Request) => {
           metadata: { target_author_id: report.target_author_id },
         });
         return jsonResponse({ status: 'ok' }, 200);
+      }
+
+      // ── Gestion des utilisateurs ──────────────────────────────────────────
+      case 'change_user_role': {
+        if (body.userId === adminId) {
+          return jsonResponse(
+            { error: 'Tu ne peux pas modifier ton propre rôle.' },
+            400,
+          );
+        }
+
+        const { error: roleError } = await adminClient
+          .from('profiles')
+          .update({ role: body.role })
+          .eq('id', body.userId);
+        if (roleError) {
+          console.error('admin-actions: changement de rôle impossible', roleError);
+          return jsonResponse({ error: 'Le changement de rôle a échoué.' }, 500);
+        }
+
+        await logModeration(adminClient, {
+          actor: 'admin',
+          actorId: adminId,
+          targetType: 'user',
+          targetId: body.userId,
+          action: `role_changed_to_${body.role}`,
+          reason: `Rôle changé en ${body.role} par l'admin.`,
+        });
+        return jsonResponse({ status: 'ok', role: body.role }, 200);
+      }
+
+      case 'delete_user': {
+        if (body.userId === adminId) {
+          return jsonResponse(
+            { error: 'Tu ne peux pas supprimer ton propre compte.' },
+            400,
+          );
+        }
+
+        // La suppression d'un auth.users cascade vers profiles (on delete
+        // cascade), donc une seule requête suffit.
+        const { error: deleteError } = await adminClient.auth.admin
+          .deleteUser(body.userId);
+        if (deleteError) {
+          console.error('admin-actions: suppression impossible', deleteError);
+          return jsonResponse({ error: 'La suppression a échoué.' }, 500);
+        }
+
+        await logModeration(adminClient, {
+          actor: 'admin',
+          actorId: adminId,
+          targetType: 'user',
+          targetId: body.userId,
+          action: 'user_deleted',
+          reason: body.reason ?? 'Compte supprimé par l\'administration.',
+        });
+        return jsonResponse({ status: 'deleted' }, 200);
       }
     }
   } catch (error) {
