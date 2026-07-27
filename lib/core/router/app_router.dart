@@ -63,13 +63,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (loggedIn) {
-        // Comptes d'administration : cantonnés au dashboard. Un admin qui
-        // arrive sur l'accueil ou toute autre route est redirigé vers /admin.
-        // Quand le rôle vaut encore null (profil non chargé), on laisse passer
-        // — `AdminShell` affiche son propre chargement et la redirection sera
-        // rejouée au rafraîchissement via `_AuthRefreshNotifier`.
+        // Comptes d'administration : cantonnés au dashboard et aux paramètres.
+        // Un admin qui arrive sur l'accueil ou toute autre route hors /admin
+        // et /settings est redirigé vers le dashboard.
         final role = ref.read(currentRoleProvider);
-        if (role == UserRole.admin && !loc.startsWith(AppRoutes.admin)) {
+        if (role == UserRole.admin &&
+            !loc.startsWith(AppRoutes.admin) &&
+            !loc.startsWith(AppRoutes.settings)) {
           return AppRoutes.admin;
         }
 
@@ -85,13 +85,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           }
         }
 
-        // Administration : même logique, rôle null = on laisse passer et
-        // `AdminShell` affiche son propre chargement puis un refus. Sans cette
-        // seconde couche côté écran, un utilisateur ordinaire verrait le
-        // dashboard clignoter avant d'être renvoyé.
+        // Administration : seuls les administrateurs passent. Quand le rôle
+        // est encore inconnu (profil en cours de chargement), on redirige vers
+        // l'accueil plutôt que de risquer un flash du dashboard. Le profil
+        // chargé, `_AuthRefreshNotifier` rejoue la garde et laisse passer les
+        // vrais admins.
         if (loc.startsWith(AppRoutes.admin)) {
           final role = ref.read(currentRoleProvider);
-          if (role != null && role != UserRole.admin) {
+          if (role != UserRole.admin) {
             return AppRoutes.home;
           }
         }

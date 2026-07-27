@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../data/auth_repository.dart';
 import 'auth_providers.dart';
 
@@ -94,11 +95,15 @@ class AuthController extends AsyncNotifier<void> {
     }
   }
 
-  /// Déconnexion.
+  /// Déconnexion. Invalide aussi le profil en cache : sans cela, un compte
+  /// admin qui se déconnecte laisse son rôle en mémoire, et l'utilisateur
+  /// suivant qui se connecte avec un compte standard voit encore le dashboard
+  /// le temps que le profil soit rechargé.
   Future<void> signOut() async {
     state = const AsyncLoading();
     try {
       await _repo.signOut();
+      ref.invalidate(currentProfileProvider);
       state = const AsyncData(null);
     } catch (e, st) {
       state = AsyncError(_genericError, st);
