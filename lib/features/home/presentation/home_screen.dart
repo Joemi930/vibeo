@@ -10,6 +10,7 @@ import '../../../core/widgets/genre_chip.dart';
 import '../../../core/widgets/skeleton_box.dart';
 import '../../../core/widgets/video_card.dart';
 import '../../../core/widgets/vibeo_app_bar.dart';
+import '../../../core/widgets/vibeo_logo.dart';
 import '../../profile/presentation/providers/profile_providers.dart';
 import '../../video/domain/genre.dart';
 import '../../video/domain/video.dart';
@@ -35,7 +36,7 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: VibeoAppBar(
-        title: 'Vibeo',
+        titleWidget: const _VibeoWordmark(),
         showBack: false,
         actions: [
           if (profile != null)
@@ -292,6 +293,30 @@ class _FeedSkeletonSliver extends StatelessWidget {
         (context, index) => const VideoCardSkeleton(),
         childCount: columns * 2,
       ),
+    );
+  }
+}
+
+/// Logo + marque dans l'en-tête de l'accueil.
+class _VibeoWordmark extends StatelessWidget {
+  const _VibeoWordmark();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const VibeoLogo(size: 22),
+        const SizedBox(width: 8),
+        Text(
+          'Vibeo',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.02,
+          ),
+        ),
+      ],
     );
   }
 }

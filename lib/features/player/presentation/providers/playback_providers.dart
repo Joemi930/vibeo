@@ -207,16 +207,21 @@ class PlaybackController extends Notifier<PlaybackState> {
       await controller.play();
     }
 
-    // Le listener n'est branché qu'ici, après le rattrapage du refus.
-    //
-    // `Duration.zero` ne suffit PAS : il cède une seule fois aux microtasks,
-    // mais le `StreamController` interne de `video_player` peut avoir
-    // plusieurs événements en file après `initialize()` + `play()`. Un délai
-    // de 50 ms lui laisse le temps de tout flusher. Sans cette attente,
-    // `addListener` lève `StateError` : « You cannot add items while items
-    // are being added from addStream ». C'est le crash du retour audio→vidéo.
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    controller.addListener(_onVideoTick);
+    // Le listener est attaché avec retry : sur le web, `initialize()` et
+    // `play()` peuvent encore être en train de pousser des événements dans
+    // le `ValueNotifier` interne, ce qui rend `addListener` fragile. Le
+    // vrai crash « addStream » venait de `VibeoAudioHandler` (corrigé dans
+    // `vibeo_audio_handler.dart`), mais cette boucle reste une protection
+    // utile contre les conditions de concurrence du lecteur vidéo.
+    for (var attempt = 0; attempt < 5; attempt++) {
+      try {
+        controller.addListener(_onVideoTick);
+        break;
+      } on StateError {
+        if (attempt == 4) rethrow;
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+      }
+    }
 
     state = state.copyWith(
       mode: PlaybackMode.video,

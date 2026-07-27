@@ -113,7 +113,7 @@ void main() {
   });
 
   testWidgets(
-    'le nom d\'utilisateur invalide (espace) bloque l\'enregistrement',
+    'le nom d\'utilisateur trop court (< 4) bloque l\'enregistrement',
     (tester) async {
       final (_, accountRepo) = await pumpScreen(tester);
 
@@ -121,14 +121,11 @@ void main() {
         TextFormField,
         'Nom d\'utilisateur',
       );
-      await tester.enterText(usernameField, 'nom invalide');
+      await tester.enterText(usernameField, 'abc');
       await tester.tap(find.widgetWithText(FilledButton, 'Enregistrer').first);
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('3 à 30 caractères : minuscules, chiffres, _.'),
-        findsOneWidget,
-      );
+      expect(find.text('4 caractères minimum.'), findsOneWidget);
       expect(accountRepo.calls, isEmpty);
     },
   );

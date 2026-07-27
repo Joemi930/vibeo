@@ -18,6 +18,7 @@ import 'theme_toggle_switch.dart';
 class VibeoAppBar extends StatelessWidget implements PreferredSizeWidget {
   const VibeoAppBar({
     this.title,
+    this.titleWidget,
     this.actions = const <Widget>[],
     this.showBack = true,
     this.fallbackRoute = AppRoutes.home,
@@ -26,8 +27,12 @@ class VibeoAppBar extends StatelessWidget implements PreferredSizeWidget {
     super.key,
   });
 
-  /// Titre affiché ; `null` pour une barre sans titre.
+  /// Titre affiché comme simple texte ; ignoré si [titleWidget] est fourni.
   final String? title;
+
+  /// Widget titre personnalisé (logo + texte, par exemple). Prioritaire sur
+  /// [title] quand les deux sont renseignés.
+  final Widget? titleWidget;
 
   /// Actions ajoutées AVANT l'interrupteur de thème.
   final List<Widget> actions;
@@ -56,7 +61,7 @@ class VibeoAppBar extends StatelessWidget implements PreferredSizeWidget {
               onPressed: () => popOrGo(context, fallbackRoute),
             )
           : null,
-      title: title == null ? null : Text(title!),
+      title: titleWidget ?? (title == null ? null : Text(title!)),
       actions: [
         ...actions,
         if (showThemeToggle) const ThemeToggleSwitch(),

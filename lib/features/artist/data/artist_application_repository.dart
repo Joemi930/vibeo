@@ -41,7 +41,7 @@ abstract class ArtistApplicationRepository {
   });
 
   /// Envoie la candidature à l'Edge Function `verify-artist`, qui crée la
-  /// ligne, déclenche l'analyse IA et rend la décision.
+  /// ligne et approuve automatiquement (Phase 7 : sans pièce d'identité).
   ///
   /// Lève [ArtistApplicationException] avec un message français adapté au
   /// code d'erreur renvoyé.
@@ -49,7 +49,7 @@ abstract class ArtistApplicationRepository {
     required String stageName,
     required List<String> links,
     required String statement,
-    required String documentPath,
+    String? documentPath,
   });
 
   /// Annule la candidature ouverte du candidat courant — seule transition
@@ -112,7 +112,7 @@ class SupabaseArtistApplicationRepository
     required String stageName,
     required List<String> links,
     required String statement,
-    required String documentPath,
+    String? documentPath,
   }) async {
     try {
       await _client.functions.invoke(
@@ -121,7 +121,6 @@ class SupabaseArtistApplicationRepository
           'stageName': stageName,
           'links': links,
           'statement': statement,
-          'documentPath': documentPath,
           'consent': true,
         },
       );

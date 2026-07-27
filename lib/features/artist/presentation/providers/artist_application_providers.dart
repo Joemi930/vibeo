@@ -44,31 +44,21 @@ class ArtistApplicationController extends Notifier<SubmitApplicationState> {
   @override
   SubmitApplicationState build() => const SubmitApplicationState();
 
-  /// Téléverse le document puis envoie la candidature. Renvoie `true` en cas
-  /// de succès.
+  /// Envoie la candidature (Phase 7 : sans pièce d'identité). Renvoie `true`
+  /// en cas de succès.
   Future<bool> submit({
     required String userId,
     required String stageName,
     required List<String> links,
     required String statement,
-    required Uint8List documentBytes,
-    required String documentExtension,
-    required String documentContentType,
   }) async {
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       final repo = ref.read(artistApplicationRepositoryProvider);
-      final documentPath = await repo.uploadIdDocument(
-        userId: userId,
-        bytes: documentBytes,
-        fileExtension: documentExtension,
-        contentType: documentContentType,
-      );
       await repo.submit(
         stageName: stageName,
         links: links,
         statement: statement,
-        documentPath: documentPath,
       );
       ref.invalidate(myApplicationProvider);
       state = state.copyWith(isSubmitting: false);

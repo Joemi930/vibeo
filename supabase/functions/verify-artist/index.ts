@@ -20,13 +20,10 @@ import {
   logModeration,
 } from '../_shared/require-admin.ts';
 
-const BUCKET = 'identity-docs';
-
 const requestSchema = z.object({
   stageName: z.string().trim().min(2).max(60),
   links: z.array(z.string().trim().url().max(200)).max(5).default([]),
   statement: z.string().trim().min(30).max(2000),
-  documentPath: z.string().min(1).max(200),
   consent: z.literal(true),
 }).strict();
 
@@ -75,13 +72,6 @@ Deno.serve(async (req: Request) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Le chemin est RECONSTRUIT, jamais repris tel quel (voir en-tête, point 2).
-  const fileName = input.documentPath.split('/').pop() ?? '';
-  if (!/^[A-Za-z0-9._-]{1,80}$/.test(fileName)) {
-    return jsonResponse({ error: 'Document invalide.' }, 400);
-  }
-  const documentPath = `${user.id}/${fileName}`;
-
   try {
     // ── Contrôles préalables ────────────────────────────────────────────────
     const { data: profile } = await adminClient
@@ -128,7 +118,6 @@ Deno.serve(async (req: Request) => {
         stage_name: input.stageName,
         links: input.links,
         statement: input.statement,
-        id_document_path: documentPath,
         status: 'pending',
       })
       .select('id')
@@ -177,19 +166,6 @@ Deno.serve(async (req: Request) => {
       action: 'application_approved',
       reason: 'Approbation automatique (Phase 7).',
     });
-
-    // Purge du document.
-    const { error: removeError } = await adminClient.storage
-      .from(BUCKET)
-      .remove([documentPath]);
-    if (removeError) {
-      console.error('verify-artist: purge impossible', removeError);
-    } else {
-      await adminClient
-        .from('artist_applications')
-        .update({ id_document_path: null, document_purged_at: now })
-        .eq('id', applicationId);
-    }
 
     return jsonResponse(
       { status: 'approved', reason: 'Candidature approuvée automatiquement.' },

@@ -69,9 +69,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     if (!_isSignUp) return null;
     final value = v?.trim() ?? '';
     if (value.isEmpty) return 'Choisis un nom d\'utilisateur.';
-    if (!RegExp(r'^[a-z0-9_]{3,30}$').hasMatch(value)) {
-      return '3 à 30 caractères : minuscules, chiffres, _.';
-    }
+    if (value.length < 4) return '4 caractères minimum.';
     return null;
   }
 

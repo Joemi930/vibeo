@@ -11,7 +11,14 @@ class VibeoAudioHandler extends BaseAudioHandler with SeekHandler {
   VibeoAudioHandler() {
     // Rediffuse l'état de `just_audio` vers le système, qui met à jour la
     // notification et les contrôles Bluetooth / écran de verrouillage.
-    _player.playbackEventStream.map(_transformEvent).pipe(playbackState);
+    //
+    // On utilise `listen` plutôt que `pipe` : `pipe` appelle `addStream` sur
+    // le `BehaviorSubject` de `audio_service`, ce qui verrouille `playbackState`
+    // pour TOUJOURS (le flux d'événements de `just_audio` ne se ferme jamais).
+    // Quand `super.stop()` appelle ensuite `playbackState.add(...)`, le
+    // `Subject` jette `StateError` : « You cannot add items while items are
+    // being added from addStream ». C'est ce qui cassait le retour audio→vidéo.
+    _player.playbackEventStream.map(_transformEvent).listen(playbackState.add);
   }
 
   final AudioPlayer _player = AudioPlayer();

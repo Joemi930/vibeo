@@ -10,11 +10,8 @@ import '../../../core/widgets/vibeo_app_bar.dart';
 import '../../auth/domain/user_role.dart';
 import '../../auth/presentation/providers/auth_providers.dart';
 import '../../profile/presentation/providers/profile_providers.dart';
-import '../../upload/data/thumbnail_picker.dart';
 import 'providers/artist_application_providers.dart';
 import 'widgets/consent_checkbox.dart';
-import 'widgets/id_document_picker.dart';
-import 'widgets/security_notice_card.dart';
 
 const int _maxLinks = 5;
 
@@ -37,8 +34,6 @@ class _BecomeArtistScreenState extends ConsumerState<BecomeArtistScreen> {
   final _statementCtrl = TextEditingController();
   final List<TextEditingController> _linkCtrls = [TextEditingController()];
 
-  PickedThumbnail? _document;
-  String? _documentFileName;
   bool _consent = false;
   bool _statementTouched = false;
 
@@ -99,23 +94,11 @@ class _BecomeArtistScreenState extends ConsumerState<BecomeArtistScreen> {
     });
   }
 
-  void _onDocumentError(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
   Future<void> _submit() async {
     final formValid = _formKey.currentState?.validate() ?? false;
     setState(() => _statementTouched = true);
     if (!formValid) return;
 
-    if (_document == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ajoute une pièce d\'identité.')),
-      );
-      return;
-    }
     if (!_consent) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -140,9 +123,6 @@ class _BecomeArtistScreenState extends ConsumerState<BecomeArtistScreen> {
           stageName: _stageNameCtrl.text.trim(),
           links: links,
           statement: _statementCtrl.text.trim(),
-          documentBytes: _document!.bytes,
-          documentExtension: _document!.fileExtension,
-          documentContentType: _document!.contentType,
         );
 
     if (!mounted) return;
@@ -243,23 +223,6 @@ class _BecomeArtistScreenState extends ConsumerState<BecomeArtistScreen> {
                 autovalidateMode: _statementTouched
                     ? AutovalidateMode.onUserInteraction
                     : AutovalidateMode.disabled,
-              ),
-              const SizedBox(height: 12),
-              IdDocumentPicker(
-                document: _document,
-                fileName: _documentFileName,
-                onPick: (picked) => setState(() {
-                  _document = picked;
-                  _documentFileName = 'Document sélectionné';
-                }),
-                onError: _onDocumentError,
-              ),
-              const SizedBox(height: 14),
-              const SecurityNoticeCard(
-                message:
-                    'Document chiffré, visible uniquement par notre équipe '
-                    'de vérification, et supprimé automatiquement après la '
-                    'décision.',
               ),
               const SizedBox(height: 18),
               ConsentCheckbox(
