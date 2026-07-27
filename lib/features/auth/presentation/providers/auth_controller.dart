@@ -137,6 +137,11 @@ class AuthController extends AsyncNotifier<void> {
     if (msg.contains('rate limit') || msg.contains('too many')) {
       return 'Trop de tentatives. Réessaie dans quelques minutes.';
     }
+    if (msg.contains('database error') || msg.contains('querying schema')) {
+      return 'Ce compte utilise la connexion Google et n\'a pas encore '
+          'de mot de passe. Utilise « Mot de passe oublié » pour en créer un, '
+          'puis reconnecte-toi.';
+    }
     return e.message;
   }
 }

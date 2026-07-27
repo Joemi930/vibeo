@@ -14,7 +14,7 @@ import '../../../upload/data/thumbnail_picker.dart';
 /// `ImageFiltered`) : le bucket `identity-docs` n'a aucune politique de
 /// lecture, même pour le propriétaire — on ne peut donc jamais recharger le
 /// document depuis le serveur pour l'afficher.
-class IdDocumentPicker extends StatelessWidget {
+class IdDocumentPicker extends StatefulWidget {
   const IdDocumentPicker({
     required this.document,
     required this.fileName,
@@ -36,19 +36,39 @@ class IdDocumentPicker extends StatelessWidget {
 
   static const int _maxDocumentBytes = 5 * 1024 * 1024;
 
+  @override
+  State<IdDocumentPicker> createState() => _IdDocumentPickerState();
+}
+
+class _IdDocumentPickerState extends State<IdDocumentPicker> {
+  bool _loading = false;
+
   Future<void> _pick() async {
+    if (_loading) return;
+    setState(() => _loading = true);
     try {
-      final picked = await pickThumbnailImage(maxBytes: _maxDocumentBytes);
-      if (picked == null) return;
-      onPick(picked);
+      // `maxWidth: 2048` réduit l'image sur Android (seul plateforme où
+      // `image_picker` l'applique). Sur le web, l'image brute est chargée
+      // telle quelle : le pont JS→Dart peut saturer pour une photo de 12 Mpx.
+      // Le `catch` ci-dessous rattrape ce cas et oriente l'utilisateur.
+      final picked = await pickThumbnailImage(
+        maxWidth: 2048,
+        maxBytes: IdDocumentPicker._maxDocumentBytes,
+      );
+      if (!mounted) return;
+      if (picked == null) return; // Annulation : pas d'erreur.
+      widget.onPick(picked);
     } catch (e) {
-      // `on PickerException` était insuffisant : sur le web, l'import
-      // conditionnel de `video_picker.dart` empêche parfois le type d'être
-      // résolu au runtime, et `image_picker` peut lever d'autres exceptions
-      // (pont JS saturé pour une photo trop lourde, format non géré, etc.).
-      // Un `catch` générique garantit qu'aucune erreur ne reste silencieuse.
-      final message = e is Exception ? e.toString() : 'Fichier invalide.';
-      onError(message);
+      if (!mounted) return;
+      // Toute exception est rattrapée — `Exception`, `Error`, ou erreur du
+      // pont JS/Dart sur le web. On ne laisse jamais l'app muette.
+      final message = e is Exception
+          ? e.toString()
+          : 'Impossible de lire ce fichier. Choisis une photo plus petite '
+                '(JPEG, PNG ou WebP, moins de 5 Mo).';
+      widget.onError(message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -56,6 +76,8 @@ class IdDocumentPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final document = widget.document;
+    final fileName = widget.fileName;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +97,7 @@ class IdDocumentPicker extends StatelessWidget {
                     'Toucher pour changer.',
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: _pick,
+            onTap: _loading ? null : _pick,
             child: Container(
               constraints: const BoxConstraints(minHeight: 120),
               clipBehavior: Clip.antiAlias,
@@ -84,7 +106,31 @@ class IdDocumentPicker extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: scheme.outlineVariant),
               ),
-              child: document == null
+              child: _loading
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 26,
+                            height: 26,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: scheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Lecture du fichier…',
+                            style: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : document == null
                   ? _EmptyPickerContent(scheme: scheme)
                   : Stack(
                       fit: StackFit.expand,
@@ -92,7 +138,7 @@ class IdDocumentPicker extends StatelessWidget {
                         ImageFiltered(
                           imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
                           child: Image.memory(
-                            document!.bytes,
+                            document.bytes,
                             fit: BoxFit.cover,
                           ),
                         ),

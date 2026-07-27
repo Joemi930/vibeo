@@ -209,13 +209,13 @@ class PlaybackController extends Notifier<PlaybackState> {
 
     // Le listener n'est branché qu'ici, après le rattrapage du refus.
     //
-    // On vide d'abord la file des microtasks pour laisser les événements vidéo
-    // en attente (émis par `initialize()` et `play()`) flusher hors du
-    // `StreamController` interne. Sans ce yield, `addListener` lève un
-    // StateError (« You cannot add items while items are being added from
-    // addStream ») quand le stream du contrôleur est encore occupé. C'est
-    // exactement ce qui arrivait au retour du mode audio.
-    await Future<void>.delayed(Duration.zero);
+    // `Duration.zero` ne suffit PAS : il cède une seule fois aux microtasks,
+    // mais le `StreamController` interne de `video_player` peut avoir
+    // plusieurs événements en file après `initialize()` + `play()`. Un délai
+    // de 50 ms lui laisse le temps de tout flusher. Sans cette attente,
+    // `addListener` lève `StateError` : « You cannot add items while items
+    // are being added from addStream ». C'est le crash du retour audio→vidéo.
+    await Future<void>.delayed(const Duration(milliseconds: 50));
     controller.addListener(_onVideoTick);
 
     state = state.copyWith(
