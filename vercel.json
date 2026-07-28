@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "bash scripts/vercel-build.sh",
+  "buildCommand": "echo 'Build done locally via flutter build web --release --csp. Use: vercel deploy --prebuilt --prod'",
   "outputDirectory": "build/web",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
