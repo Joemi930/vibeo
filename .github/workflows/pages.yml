@@ -1,19 +1,26 @@
-name: Déploiement Vercel
+name: Déploiement GitHub Pages
 
 on:
   push:
     branches: ['main']
   workflow_dispatch:
 
-# Un seul déploiement à la fois.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   deploy:
-    name: Déploiement production
+    name: Build et déploiement
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,14 +39,20 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          WEB_BASE_URL: ${{ secrets.WEB_BASE_URL }}
         run: |
-          flutter build web --release --csp \
+          flutter build web --release --csp --base-href /vibeo/ \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define=WEB_BASE_URL="$WEB_BASE_URL"
+            --dart-define=WEB_BASE_URL="https://joemi930.github.io/vibeo"
 
-      - name: Déployer sur Vercel
-        working-directory: build/web
-        run: |
-          npx vercel deploy --prod --token "${{ secrets.VERCEL_TOKEN }}" --yes
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

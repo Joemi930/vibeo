@@ -32,6 +32,7 @@ migrate_working_dir/
 .pub/
 /build/
 android/build/
+.vercel/
 /coverage/
 
 # Symbolication related
@@ -67,4 +68,3 @@ supabase/logs/
 # Fichiers média de test : lourds et sans intérêt pour le dépôt.
 *.mp4
 *.mov
-.vercel

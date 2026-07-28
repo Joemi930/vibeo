@@ -137,7 +137,7 @@ Vercel · Gemini IA
 
 | Environnement | URL |
 |---|---|
-| **Production (Vercel)** | https://vibeo-gray.vercel.app |
+| **Production (GitHub Pages)** | https://joemi930.github.io/vibeo |
 | **Local** | http://127.0.0.1:8080 |
 
 ---

@@ -40,7 +40,7 @@ Tu es l'architecte et le chef d'équipe, pas le développeur de base :
   `supabase/functions/_shared/ai-provider.ts` — abstraction permettant de
   basculer sur DeepSeek (`AI_PROVIDER=deepseek`, texte uniquement).
   Clés IA UNIQUEMENT dans les secrets Edge Functions.
-- Web sur **Vercel**, CI sur **GitHub Actions**
+- Web sur **GitHub Pages**, CI sur **GitHub Actions**
 
 ## Commandes
 ```bash

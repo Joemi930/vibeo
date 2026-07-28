@@ -11,7 +11,7 @@
 ┌─────────────────────────────┐        ┌──────────────────────────────┐
 │   Flutter (Dart)            │        │   Supabase (free tier)       │
 │   ├── App Android (APK)     │◄──────►│   ├── Postgres + RLS         │
-│   └── App Web (Vercel)      │  HTTPS │   ├── Auth (email + Google)  │
+│   └── App Web (GitHub Pages) │  HTTPS │   ├── Auth (email + Google)  │
 │                             │        │   ├── Storage (vidéos, imgs, │
 │   Compression vidéo         │        │   │    docs d'identité)      │
 │   on-device (ffmpeg_kit)    │        │   ├── Edge Functions (Deno)  │
@@ -35,7 +35,7 @@
 | État | **Riverpod** | Standard moderne, testable |
 | Navigation | **go_router** | Deep links (partage de clips), web-friendly |
 | Backend | **Supabase** | Postgres + Auth + Storage + Edge Functions, gratuit |
-| Hébergement web | **Vercel** (build Flutter web) | Gratuit, CDN, headers sécurité |
+| Hébergement web | **GitHub Pages** (Flutter web compilé) | Gratuit, CDN
 | Lecture vidéo | **video_player** | Streaming progressif MP4 (`chewie` retiré : lecteur écrit à la main pour coller aux maquettes) |
 | Audio arrière-plan | **just_audio** + **audio_service** | Notification média, mode "YT Music" |
 | Compression vidéo | **video_compress** (Android) · **WebCodecs + mediabunny** (web) | 720p AVANT upload → budget 0 € (voir note ci-dessous) |
@@ -205,7 +205,7 @@ de la carte d'identité** (photo/scan) → Edge Function `verify-artist` :
    1 candidature/semaine, 20 signalements/jour.
 6. **Secrets** : .env jamais commité (hook + .gitignore), service_role et clés
    IA jamais dans l'app.
-7. **Web (Vercel)** : headers CSP, X-Frame-Options, HSTS via vercel.json.
+7. **Web (GitHub Pages)** : déploiement automatique via GitHub Actions (`pages.yml`).
 8. **Client** : contenu utilisateur affiché en texte brut, jamais de HTML injecté.
 9. **CI** : analyze + tests bloquants, scan de secrets (gitleaks).
 10. **Revue** : agent security-reviewer sur chaque fonctionnalité sensible.

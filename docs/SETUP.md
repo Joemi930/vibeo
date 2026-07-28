@@ -11,7 +11,7 @@
 | **Android Studio** | 2024+ | https://developer.android.com/studio (pour l'émulateur et le SDK Android) |
 | **Supabase CLI** | 2.x | `npm i -g supabase` ou `scoop install supabase` |
 | **Deno** | 2.x | https://deno.com (pour tester les Edge Functions) |
-| **Node.js** | 18+ | https://nodejs.org (pour la CLI Vercel et Supabase) |
+| **Node.js** | 18+ | https://nodejs.org (pour la CLI Supabase) |
 
 Vérifie ton installation :
 ```bash
@@ -65,11 +65,12 @@ flutter build apk --release --dart-define-from-file=env.json
 # APK dans build/app/outputs/flutter-apk/app-release.apk
 ```
 
-### Web release (pour Vercel)
+### Web release (pour GitHub Pages)
 ```bash
-flutter build web --release --csp --dart-define-from-file=env.json
+flutter build web --release --csp --base-href /vibeo/ --dart-define-from-file=env.json
 # Sortie dans build/web/
 ```
+Le `--base-href /vibeo/` est nécessaire car GitHub Pages sert depuis `https://joemi930.github.io/vibeo/`.
 
 ## Base de données — Supabase
 
@@ -151,7 +152,7 @@ Le projet utilise GitHub Actions (`.github/workflows/ci.yml`) :
 - `flutter build web` (vérifie que le build web compile)
 - `deno test` pour les Edge Functions
 
-Le déploiement Vercel se fait via `vercel build --prod && vercel deploy --prebuilt --prod`.
+Le déploiement GitHub Pages est automatique à chaque push sur `main` (workflow `pages.yml`).
 
 ## Comptes de test
 

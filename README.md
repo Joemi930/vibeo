@@ -1,17 +1,67 @@
-# vibeo
+# Vibeo
 
-A new Flutter project.
+Plateforme de publication de clips vidéos pour artistes vérifiés — mélange
+YouTube / YouTube Music. **Android + Web**, une seule codebase Flutter.
 
-## Getting Started
+[![CI](https://github.com/Joemi930/vibeo/actions/workflows/ci.yml/badge.svg)](https://github.com/Joemi930/vibeo/actions/workflows/ci.yml)
+[![Pages](https://github.com/Joemi930/vibeo/actions/workflows/pages.yml/badge.svg)](https://joemi930.github.io/vibeo)
 
-This project is a starting point for a Flutter application.
+**Production :** https://joemi930.github.io/vibeo
 
-A few resources to get you started if this is your first Flutter project:
+## Stack
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+| Couche | Technologie |
+|---|---|
+| App | **Flutter 3.x (Dart)** — Material 3, thème clair/sombre |
+| État | **Riverpod** — providers sans codegen |
+| Navigation | **go_router** — deep links, hash URL strategy |
+| Backend | **Supabase** — Postgres + Auth + Storage + Edge Functions |
+| Hébergement | **GitHub Pages** — déploiement automatique via GitHub Actions |
+| IA | **Gemini API** (multimodal, tier gratuit) via Edge Functions |
+| CI | **GitHub Actions** — analyze, tests, build, déploiement |
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Lancer en local
+
+```bash
+git clone https://github.com/Joemi930/vibeo.git
+cd vibeo
+flutter pub get
+
+# Créer env.json :
+echo '{"SUPABASE_URL":"https://ilqvqohjoekthxouwffd.supabase.co","SUPABASE_ANON_KEY":"sb_publishable_ot0IDcro7N4sKtOu713SBA_Y4OFg5b4"}' > env.json
+
+# Web
+flutter run -d chrome --dart-define-from-file=env.json
+
+# Android
+flutter run --dart-define-from-file=env.json
+```
+
+## Documentation
+
+- **[Architecture](docs/ARCHITECTURE.md)** — Stack, base de données, sécurité, phases
+- **[Présentation V1](docs/PRESENTATION.md)** — Fonctionnalités, guide de test, retours attendus
+- **[Guide d'installation](docs/SETUP.md)** — Prérequis, configuration, déploiement
+
+## Commandes
+
+```bash
+flutter analyze          # Lint
+flutter test             # Tests unitaires + widgets (333+)
+flutter build apk        # APK Android release
+flutter build web        # Build web (GitHub Pages)
+supabase functions deploy # Déployer une Edge Function
+supabase db push         # Appliquer les migrations
+```
+
+## Conventions
+
+- Code et identifiants en **anglais** ; UI, commentaires et commits en **français**
+- Commits : [Conventional Commits](https://www.conventionalcommits.org)
+- Branches : `feat/<nom>` → PR → CI verte → merge
+- Tout modèle a un `fromJson`/`toJson` testé
+- Pas de `dynamic` sauf impossibilité prouvée
+
+---
+
+> Projet portfolio — Joemi Tete · Budget : 0 € · Sécurité maximale
