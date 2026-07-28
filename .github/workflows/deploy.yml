@@ -3,6 +3,7 @@ name: Déploiement Vercel
 on:
   push:
     branches: ['main']
+  workflow_dispatch:
 
 # Un seul déploiement à la fois.
 concurrency:
