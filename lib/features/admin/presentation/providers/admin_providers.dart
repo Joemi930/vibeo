@@ -7,6 +7,7 @@ import '../../domain/admin_application.dart';
 import '../../domain/admin_report.dart';
 import '../../domain/admin_stats.dart';
 import '../../domain/admin_user.dart';
+import '../../domain/admin_user_detail.dart';
 import '../../domain/admin_video_queue.dart';
 import '../../domain/moderation_log.dart';
 
@@ -43,6 +44,34 @@ final adminLogsProvider =
 
 final adminUsersProvider = FutureProvider<List<AdminUser>>((ref) {
   return ref.watch(adminRepositoryProvider).fetchUsers();
+});
+
+/// Requête de recherche dans la liste des utilisateurs (filtrée côté client).
+class AdminUserSearchQuery extends Notifier<String> {
+  @override
+  String build() => '';
+  void update(String q) => state = q;
+}
+
+final adminUserSearchQueryProvider =
+    NotifierProvider<AdminUserSearchQuery, String>(AdminUserSearchQuery.new);
+
+/// Rôle sélectionné pour le filtre des utilisateurs (`null` = tous).
+class AdminUserRoleFilter extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void update(String? role) => state = role;
+}
+
+final adminUserRoleFilterProvider =
+    NotifierProvider<AdminUserRoleFilter, String?>(AdminUserRoleFilter.new);
+
+/// Détail complet d'un utilisateur (profil, auth, vidéos, commentaires…).
+final adminUserDetailProvider = FutureProvider.family<AdminUserDetail, String>((
+  ref,
+  userId,
+) {
+  return ref.watch(adminRepositoryProvider).fetchUserDetail(userId);
 });
 
 /// Onglet courant du dashboard, dérivé de `?tab=` par [AdminShell] et relu
@@ -152,6 +181,34 @@ class AdminActionController extends Notifier<bool> {
         ref.invalidate(adminUsersProvider);
         ref.invalidate(adminStatsProvider);
       });
+
+  Future<String?> createUser({
+    required String email,
+    required String password,
+    required String username,
+    required String role,
+  }) => _run(() async {
+    await ref
+        .read(adminRepositoryProvider)
+        .createUser(
+          email: email,
+          password: password,
+          username: username,
+          role: role,
+        );
+    ref.invalidate(adminUsersProvider);
+    ref.invalidate(adminStatsProvider);
+  });
+
+  Future<String?> banUser(String userId) => _run(() async {
+    await ref.read(adminRepositoryProvider).banUser(userId);
+    ref.invalidate(adminUserDetailProvider(userId));
+  });
+
+  Future<String?> unbanUser(String userId) => _run(() async {
+    await ref.read(adminRepositoryProvider).unbanUser(userId);
+    ref.invalidate(adminUserDetailProvider(userId));
+  });
 
   Future<String?> _run(Future<void> Function() action) async {
     if (state) return null;

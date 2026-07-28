@@ -4,6 +4,7 @@ import '../domain/admin_application.dart';
 import '../domain/admin_report.dart';
 import '../domain/admin_stats.dart';
 import '../domain/admin_user.dart';
+import '../domain/admin_user_detail.dart';
 import '../domain/admin_video_queue.dart';
 import '../domain/moderation_log.dart';
 
@@ -67,6 +68,25 @@ abstract class AdminRepository {
 
   /// Supprime définitivement un compte utilisateur.
   Future<void> deleteUser({required String userId, String? reason});
+
+  /// Récupère le détail complet d'un utilisateur (profil, auth, vidéos,
+  /// commentaires, playlists, abonnements, signalements, journal).
+  Future<AdminUserDetail> fetchUserDetail(String userId);
+
+  /// Crée un utilisateur avec email, mot de passe, username et rôle.
+  /// Retourne l'ID du nouvel utilisateur.
+  Future<String> createUser({
+    required String email,
+    required String password,
+    required String username,
+    required String role,
+  });
+
+  /// Bannit un utilisateur (empêche toute connexion).
+  Future<void> banUser(String userId);
+
+  /// Lève le bannissement d'un utilisateur.
+  Future<void> unbanUser(String userId);
 }
 
 /// Implémentation Supabase de [AdminRepository].
@@ -279,6 +299,47 @@ class SupabaseAdminRepository implements AdminRepository {
       throw AdminActionException(_messageFor(e));
     }
   }
+
+  // ── Méthodes pour la gestion avancée des utilisateurs ──────────────────
+
+  @override
+  Future<AdminUserDetail> fetchUserDetail(String userId) async {
+    final data = await _invoke({'action': 'get_user_detail', 'userId': userId});
+    return AdminUserDetail.fromJson(data);
+  }
+
+  @override
+  Future<String> createUser({
+    required String email,
+    required String password,
+    required String username,
+    required String role,
+  }) async {
+    final data = await _invoke({
+      'action': 'create_user',
+      'email': email,
+      'password': password,
+      'username': username,
+      'role': role,
+    });
+    final userId = data['userId'] as String?;
+    if (userId == null) {
+      throw const AdminActionException('La création du compte a échoué.');
+    }
+    return userId;
+  }
+
+  @override
+  Future<void> banUser(String userId) async {
+    await _invoke({'action': 'ban_user', 'userId': userId});
+  }
+
+  @override
+  Future<void> unbanUser(String userId) async {
+    await _invoke({'action': 'unban_user', 'userId': userId});
+  }
+
+  // ── Suite des méthodes existantes ──────────────────────────────────────
 
   @override
   Future<List<AdminUser>> fetchUsers() async {

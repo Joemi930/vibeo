@@ -73,6 +73,25 @@ const requestSchema = z.discriminatedUnion('action', [
     userId: z.string().uuid(),
     reason: z.string().trim().max(500).optional(),
   }).strict(),
+  z.object({
+    action: z.literal('create_user'),
+    email: z.string().email().max(255),
+    password: z.string().min(8).max(72),
+    username: z.string().trim().min(4).max(30),
+    role: z.enum(['listener', 'artist', 'admin']),
+  }).strict(),
+  z.object({
+    action: z.literal('get_user_detail'),
+    userId: z.string().uuid(),
+  }).strict(),
+  z.object({
+    action: z.literal('ban_user'),
+    userId: z.string().uuid(),
+  }).strict(),
+  z.object({
+    action: z.literal('unban_user'),
+    userId: z.string().uuid(),
+  }).strict(),
 ]);
 
 Deno.serve(async (req: Request) => {
@@ -319,6 +338,248 @@ Deno.serve(async (req: Request) => {
       }
 
       // ── Gestion des utilisateurs ──────────────────────────────────────────
+      case 'create_user': {
+        // Vérifier que l'email n'est pas déjà utilisé.
+        const { data: existing } = await adminClient
+          .from('profiles')
+          .select('id')
+          .eq('username', body.username)
+          .maybeSingle();
+        if (existing) {
+          return jsonResponse(
+            { error: 'Ce nom d\'utilisateur est déjà pris.' },
+            409,
+          );
+        }
+
+        // Créer l'utilisateur dans Auth. Le trigger `handle_new_user` crée le
+        // profil automatiquement. L'email de confirmation n'est PAS envoyé
+        // (email_confirm: true) pour que l'utilisateur puisse se connecter
+        // immédiatement.
+        const { data: newUser, error: createError } = await adminClient.auth.admin
+          .createUser({
+            email: body.email,
+            password: body.password,
+            email_confirm: true,
+            user_metadata: { username: body.username },
+          });
+        if (createError) {
+          console.error('admin-actions: création utilisateur impossible', createError);
+          if (createError.message?.includes('already')) {
+            return jsonResponse(
+              { error: 'Un compte avec cet email existe déjà.' },
+              409,
+            );
+          }
+          return jsonResponse({ error: 'La création du compte a échoué.' }, 500);
+        }
+        if (!newUser?.user) {
+          return jsonResponse({ error: 'La création du compte a échoué.' }, 500);
+        }
+
+        // Appliquer le rôle demandé (le trigger met 'listener' par défaut).
+        if (body.role !== 'listener') {
+          const { error: roleError } = await adminClient
+            .from('profiles')
+            .update({ role: body.role })
+            .eq('id', newUser.user.id);
+          if (roleError) {
+            console.error('admin-actions: attribution rôle impossible', roleError);
+            return jsonResponse({
+              error: 'Compte créé mais le rôle n\'a pas pu être attribué.',
+            }, 500);
+          }
+        }
+
+        await logModeration(adminClient, {
+          actor: 'admin',
+          actorId: adminId,
+          targetType: 'user',
+          targetId: newUser.user.id,
+          action: 'user_created',
+          reason: `Créé par l'admin avec le rôle ${body.role}.`,
+        });
+
+        return jsonResponse({
+          status: 'created',
+          userId: newUser.user.id,
+          role: body.role,
+        }, 200);
+      }
+
+      case 'get_user_detail': {
+        const userId = body.userId;
+
+        // Profil
+        const { data: profile } = await adminClient
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (!profile) {
+          return jsonResponse({ error: 'Utilisateur introuvable.' }, 404);
+        }
+
+        // Infos Auth (email, dernière connexion, banni ?)
+        const { data: authUser } = await adminClient.auth.admin
+          .getUserById(userId);
+
+        // Vidéos (si artiste)
+        const { data: videos } = await adminClient
+          .from('videos')
+          .select('*')
+          .eq('artist_id', userId)
+          .order('created_at', { ascending: false });
+
+        // Commentaires
+        const { data: comments } = await adminClient
+          .from('comments')
+          .select('*')
+          .eq('author_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        // Playlists
+        const { data: playlists } = await adminClient
+          .from('playlists')
+          .select('*')
+          .eq('owner_id', userId)
+          .order('created_at', { ascending: false });
+
+        // Abonnements (qui cet utilisateur suit)
+        const { data: subscriptions } = await adminClient
+          .from('subscriptions')
+          .select('artist_id, created_at')
+          .eq('subscriber_id', userId);
+
+        // Abonnés (qui suit cet utilisateur)
+        const { data: subscribers } = await adminClient
+          .from('subscriptions')
+          .select('subscriber_id, created_at')
+          .eq('artist_id', userId);
+
+        // Signalements émis par cet utilisateur
+        const { data: reportsFiled } = await adminClient
+          .from('reports')
+          .select('*')
+          .eq('reporter_id', userId)
+          .order('created_at', { ascending: false });
+
+        // Signalements contre cet utilisateur
+        const { data: reportsAgainst } = await adminClient
+          .from('reports')
+          .select('*')
+          .eq('target_author_id', userId)
+          .order('created_at', { ascending: false });
+
+        // Journal de modération
+        const { data: modLogs } = await adminClient
+          .from('moderation_logs')
+          .select('*')
+          .eq('target_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        // Résoudre les noms d'artistes pour les abonnements
+        const artistIds = [
+          ...new Set([
+            ...(subscriptions ?? []).map((s: any) => s.artist_id),
+            ...(subscribers ?? []).map((s: any) => s.subscriber_id),
+          ]),
+        ];
+        const { data: usernames } = artistIds.length > 0
+          ? await adminClient
+              .from('profiles')
+              .select('id, username, display_name, avatar_url')
+              .inFilter('id', artistIds as string[])
+          : { data: [] };
+
+        const usernameMap = new Map(
+          (usernames ?? []).map((u: any) => [u.id, u]),
+        );
+
+        return jsonResponse({
+          profile,
+          auth: {
+            email: authUser?.user?.email ?? null,
+            lastSignInAt: authUser?.user?.last_sign_in_at ?? null,
+            createdAt: authUser?.user?.created_at ?? null,
+            isBanned: authUser?.user?.banned_until != null
+              ? authUser.user.banned_until > new Date().toISOString()
+              : false,
+            bannedUntil: authUser?.user?.banned_until ?? null,
+          },
+          videos: videos ?? [],
+          comments: comments ?? [],
+          playlists: playlists ?? [],
+          subscriptions: (subscriptions ?? []).map((s: any) => ({
+            ...s,
+            artistUsername: usernameMap.get(s.artist_id)?.username ?? null,
+            artistDisplayName: usernameMap.get(s.artist_id)?.display_name ?? null,
+          })),
+          subscribers: (subscribers ?? []).map((s: any) => ({
+            ...s,
+            subscriberUsername: usernameMap.get(s.subscriber_id)?.username ?? null,
+            subscriberDisplayName: usernameMap.get(s.subscriber_id)?.display_name ?? null,
+          })),
+          reportsFiled: reportsFiled ?? [],
+          reportsAgainst: reportsAgainst ?? [],
+          moderationLogs: modLogs ?? [],
+        }, 200);
+      }
+
+      case 'ban_user': {
+        if (body.userId === adminId) {
+          return jsonResponse(
+            { error: 'Tu ne peux pas bannir ton propre compte.' },
+            400,
+          );
+        }
+
+        // Bannissement permanent (ban for 100 years)
+        const banUntil = new Date();
+        banUntil.setFullYear(banUntil.getFullYear() + 100);
+
+        const { error: banError } = await adminClient.auth.admin
+          .updateUserById(body.userId, {
+            ban_duration: '3162240000s', // ~100 ans en secondes
+          });
+        if (banError) {
+          console.error('admin-actions: bannissement impossible', banError);
+          return jsonResponse({ error: 'Le bannissement a échoué.' }, 500);
+        }
+
+        await logModeration(adminClient, {
+          actor: 'admin',
+          actorId: adminId,
+          targetType: 'user',
+          targetId: body.userId,
+          action: 'user_banned',
+          reason: 'Compte banni par l\'administration.',
+        });
+        return jsonResponse({ status: 'banned' }, 200);
+      }
+
+      case 'unban_user': {
+        const { error: unbanError } = await adminClient.auth.admin
+          .updateUserById(body.userId, { ban_duration: '0s' });
+        if (unbanError) {
+          console.error('admin-actions: débannissement impossible', unbanError);
+          return jsonResponse({ error: 'Le débannissement a échoué.' }, 500);
+        }
+
+        await logModeration(adminClient, {
+          actor: 'admin',
+          actorId: adminId,
+          targetType: 'user',
+          targetId: body.userId,
+          action: 'user_unbanned',
+          reason: 'Compte débanni par l\'administration.',
+        });
+        return jsonResponse({ status: 'unbanned' }, 200);
+      }
+
       case 'change_user_role': {
         if (body.userId === adminId) {
           return jsonResponse(

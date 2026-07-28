@@ -81,8 +81,10 @@ declare
 begin
   meta_username := new.raw_user_meta_data ->> 'username';
 
-  -- Utilise le username fourni s''il respecte le format, sinon un fallback unique.
-  if meta_username is not null and meta_username ~ '^[a-z0-9_]{3,30}$' then
+  -- Utilise le username fourni s''il respecte la longueur minimale (>= 4),
+  -- sinon un fallback unique. La règle a été assouplie en Phase 7 : toute
+  -- chaîne >= 4 caractères est acceptée (le CHECK sur profiles.username aussi).
+  if meta_username is not null and char_length(meta_username) >= 4 then
     final_username := meta_username;
   else
     final_username := 'user_' || substr(replace(new.id::text, '-', ''), 1, 12);
