@@ -296,7 +296,7 @@ class SupabaseAdminRepository implements AdminRepository {
       if (data is Map) return data.cast<String, dynamic>();
       return const {};
     } on FunctionException catch (e) {
-      throw AdminActionException(_messageFor(e));
+      throw AdminActionException(_messageFor(e, body['action'] as String?));
     }
   }
 
@@ -374,17 +374,28 @@ class SupabaseAdminRepository implements AdminRepository {
     });
   }
 
-  String _messageFor(FunctionException e) {
+  String _messageFor(FunctionException e, [String? action]) {
+    final detail = e.details;
+    String? serverError;
+    if (detail is Map) {
+      serverError = (detail['error'] ?? detail['message']) as String?;
+    } else if (detail is String && detail.isNotEmpty) {
+      serverError = detail;
+    }
+
+    final suffix = serverError != null ? ' ($serverError)' : '';
+    final actionInfo = action != null ? ' [$action]' : '';
+
     switch (e.status) {
       case 404:
       case 401:
-        return 'L\'action n\'a pas pu être effectuée. Réessaie.';
+        return 'L\'action n\'a pas pu être effectuée. Réessaie.$suffix$actionInfo';
       case 409:
-        return 'Cet élément a déjà été traité.';
+        return serverError ?? 'Cet élément a déjà été traité.$actionInfo';
       case 400:
-        return 'Requête invalide.';
+        return serverError ?? 'Requête invalide.$actionInfo';
       default:
-        return 'L\'action a échoué. Réessaie.';
+        return 'L\'action a échoué (${e.status}). Réessaie.$suffix$actionInfo';
     }
   }
 }

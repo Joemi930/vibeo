@@ -431,7 +431,10 @@ enabled = true
 verify_jwt = true
 
 [functions.admin-actions]
-verify_jwt = true
+# verify_jwt = false : la fonction valide elle-même le JWT via requireAdmin().
+# Les nouvelles clés API longues (sb_publishable_...) sont incompatibles avec
+# la vérification JWT automatique du gateway.
+verify_jwt = false
 
 [functions.delete-account]
 verify_jwt = true

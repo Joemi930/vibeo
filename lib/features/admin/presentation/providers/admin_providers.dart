@@ -220,7 +220,8 @@ class AdminActionController extends Notifier<bool> {
       return e.message;
     } catch (error) {
       logError('action admin impossible', error);
-      return 'L\'action a échoué. Réessaie.';
+      final detail = error.runtimeType.toString();
+      return 'L\'action a échoué ($detail). Réessaie.';
     } finally {
       state = false;
     }
