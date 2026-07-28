@@ -158,5 +158,19 @@ Le déploiement GitHub Pages est automatique à chaque push sur `main` (workflow
 
 | Rôle | Email | Usage |
 |---|---|---|
-| Admin | `Admin@admin.test` | Dashboard, modération, signalements |
+| Admin | `Admin@admin.test` | Dashboard, modération, signalements, gestion utilisateurs |
 | Admin | `joemitete12@gmail.com` | Admin principal |
+
+> 💡 **Astuce :** Si l'inscription par email/mot de passe ne fonctionne pas (erreur
+> « Email not confirmed » ou email de confirmation jamais reçu), désactive la
+> confirmation d'email dans le dashboard Supabase :
+> **Authentication → Settings → décocher « Enable email confirmations »**.
+
+## Dépannage
+
+| Problème | Solution |
+|---|---|
+| L'APK ne se build pas (erreur Gradle/SSL) | Vérifier le truststore Java (`keytool -list -cacerts`). Alternative : builder sur une CI ou un autre poste. |
+| La lecture vidéo ne fonctionne pas sur web | `flutter clean && flutter pub get && flutter build web` — le registre de greffons se périme en silence. |
+| Google Sign-In ne marche pas en production | Vérifier que `https://joemi930.github.io/vibeo/**` est dans les Redirect URLs Supabase. |
+| `flutter analyze` bloque le commit | Corriger les erreurs listées, ou lancer `flutter analyze` manuellement pour voir le détail. |

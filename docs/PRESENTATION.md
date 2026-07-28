@@ -17,7 +17,7 @@ arrière-plan), avec une vérification d'identité des artistes et un dashboard
 d'administration.
 
 **Stack :** Flutter (Android + Web) · Supabase (Postgres, Auth, Storage) ·
-Vercel · Gemini IA
+GitHub Pages · Gemini IA
 
 ---
 
@@ -27,7 +27,7 @@ Vercel · Gemini IA
 ┌──────────────────────────┐        ┌──────────────────────────┐
 │   Flutter (Dart)          │        │   Supabase                │
 │   ├── Android (APK)       │◄──────►│   ├── Postgres + RLS      │
-│   └── Web (Vercel)        │  HTTPS │   ├── Auth (email+Google) │
+│   └── Web (GitHub Pages)   │  HTTPS │   ├── Auth (email+Google) │
 │                            │        │   ├── Storage (privé)    │
 │   Compression sur l'appareil        │   └── Edge Functions     │
 │   (720p max, 60 Mo / 4 min)        └───────────┬──────────────┘
@@ -41,7 +41,7 @@ Vercel · Gemini IA
 ```
 
 **Points clés :**
-- **Budget infra : 0 €** — tout tient dans le tier gratuit Supabase + Vercel
+- **Budget infra : 0 €** — tout tient dans le tier gratuit Supabase + GitHub Pages
 - **Compression sur l'appareil** : 720p AVANT upload, jamais de transcodage serveur
 - **RLS (Row Level Security)** activé sur chaque table — le client ne peut pas tricher
 - **IA** : Gemini (multimodal) pour la modération de contenu et la vérification d'identité
@@ -79,12 +79,12 @@ Vercel · Gemini IA
 | Fonctionnalité | Description |
 |---|---|
 | **Dashboard** | Sidebar 6 onglets : Candidatures, Modération, Signalements, Utilisateurs, Stats, Journal |
-| **Candidatures** | Examen et décision (approuver/rejeter) |
-| **Modération vidéos** | File d'attente des clips, retrait manuel |
-| **Signalements** | Traitement priorisé (score automatique) : retirer le contenu ou ignorer |
-| **Utilisateurs** | Liste des comptes, changement de rôle, suppression définitive |
-| **Statistiques** | Utilisateurs, artistes, clips, vues, stockage utilisé |
-| **Journal** | Historique complet des actions de modération |
+| **Candidatures** | Examen et décision (approuver/rejeter), visionneuse sécurisée des pièces d'identité |
+| **Modération vidéos** | File d'attente des clips, retrait manuel, republication |
+| **Signalements** | Traitement priorisé : retirer le contenu, avertir l'auteur ou ignorer |
+| **Utilisateurs** | Liste avec recherche et filtres par rôle, fiche détaillée par utilisateur (vidéos, commentaires, playlists, abonnements, signalements, journal), création de compte admin, changement de rôle, bannissement, suppression |
+| **Statistiques** | Utilisateurs, artistes, clips, vues, stockage utilisé, jauge de quota |
+| **Journal** | Historique complet et filtrable de toutes les actions de modération |
 
 ---
 
@@ -129,9 +129,11 @@ Vercel · Gemini IA
 10. **Studio** — Upload un clip vidéo (Android uniquement)
 11. **Paramètres** — Change le thème clair/sombre
 12. **Dashboard admin** — Connecte-toi en admin, explore les 6 onglets
-13. **Gestion utilisateurs** — Change le rôle d'un compte, crée un admin test
-14. **Signalement** — Signale un clip, puis traite-le depuis le dashboard admin
-15. **Déconnexion** — Déconnecte-toi, reconnecte-toi avec un autre compte
+13. **Gestion utilisateurs** — Recherche un utilisateur, filtre par rôle, ouvre sa fiche détaillée, explore ses vidéos/commentaires/signalements
+14. **Création de compte** — Depuis l'admin, crée un compte avec le rôle de ton choix
+15. **Bannissement** — Bannis un compte, vérifie qu'il ne peut plus se connecter, puis débannis-le
+16. **Signalement** — Signale un clip, puis traite-le depuis le dashboard admin
+17. **Déconnexion** — Déconnecte-toi, reconnecte-toi avec un autre compte
 
 ### URLs
 
@@ -173,14 +175,29 @@ Pour chaque test, note :
 
 | Métrique | Valeur |
 |---|---|
-| **Tests** | 333 (Flutter) + 54 (Edge Functions) |
-| **Fichiers Dart** | 200+ |
-| **Migrations SQL** | 19 |
+| **Tests** | 333+ (Flutter) + 54 (Edge Functions) |
+| **Fichiers Dart** | 210+ |
+| **Migrations SQL** | 20 |
 | **Edge Functions** | 4 (verify-artist, moderate-video, admin-actions, purge-identity-docs) |
-| **Écrans** | 15+ |
+| **Écrans** | 18+ |
 | **Rôles** | 3 (listener, artist, admin) |
 | **Compression** | 720p / 60 Mo / 4 min — 100% sur l'appareil |
 | **Coût mensuel** | 0 € |
+
+---
+
+## 🔮 V2 — Pistes d'évolution
+
+| Fonctionnalité | Description |
+|---|---|
+| **Recommandations IA** | Suggestions personnalisées basées sur l'historique d'écoute |
+| **Tendances temps réel** | Classement dynamique des clips les plus regardés |
+| **Notifications push** | Nouveaux clips des abonnements, réponses aux commentaires |
+| **Playlists collaboratives** | Plusieurs utilisateurs éditent une même playlist |
+| **Analytics artiste** | Dashboard de statistiques pour les artistes (vues, audience, rétention) |
+| **Mode hors-ligne** | Téléchargement des clips pour lecture sans connexion |
+| **Partage social** | Stories, intégration TikTok/Instagram |
+| **Monétisation** | Pourboires, abonnements payants, split revenus |
 
 ---
 

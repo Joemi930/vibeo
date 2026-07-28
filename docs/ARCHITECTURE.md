@@ -249,12 +249,13 @@ documentés ici pour ne pas être re-découverts comme des défauts :
 
 ## 8. Phases de développement
 
-| Phase | Contenu |
-|---|---|
-| **Config outils** | Faite PAR L'UTILISATEUR via GUIDE-CONFIGURATION.md |
-| **P1 — Fondations + Auth** | Projet Flutter, thème, router, Supabase, CI, inscription/connexion/Google, profils, rôles |
-| **P2 — Vidéo** | Upload + compression, storage, lecteur, mini-player, audio background |
-| **P3 — Social** | Likes, commentaires, abonnements, playlists, partage, recherche, genres |
-| **P4 — IA & vérification** | Candidature artiste + carte d'identité, modération vidéos, signalements |
-| **P5 — Découverte** | Tendances, recommandations |
-| **P6 — Admin & durcissement** | Dashboard admin, revue sécurité complète, tests d'intégration, polish |
+| Phase | Contenu | Statut |
+|---|---|---|
+| **Config outils** | Faite PAR L'UTILISATEUR via GUIDE-CONFIGURATION.md | ✅ |
+| **P1 — Fondations + Auth** | Projet Flutter, thème, router, Supabase, CI, inscription/connexion/Google, profils, rôles | ✅ |
+| **P2 — Vidéo** | Upload + compression, storage, lecteur, mini-player, audio background | ✅ |
+| **P3 — Social** | Likes, commentaires, abonnements, playlists, partage, recherche, genres | ✅ |
+| **P4 — IA & vérification** | Candidature artiste + carte d'identité, modération vidéos, signalements | ✅ |
+| **P5 — Découverte** | Tendances, recommandations | ✅ |
+| **P6 — Admin & durcissement** | Dashboard admin, revue sécurité complète, tests d'intégration, polish | ✅ |
+| **P7 — Gestion utilisateurs** | Recherche, filtres, fiche détaillée, création de comptes, bannissement, journal par utilisateur | ✅ |

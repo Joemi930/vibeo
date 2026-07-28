@@ -37,6 +37,18 @@ flutter run -d chrome --dart-define-from-file=env.json
 flutter run --dart-define-from-file=env.json
 ```
 
+## Fonctionnalités
+
+| Public | Artistes | Admins |
+|---|---|---|
+| Lecteur vidéo + mode audio | Upload avec compression on-device | Dashboard 6 onglets |
+| Recherche clips & artistes | Studio de gestion des clips | Candidatures + vérification |
+| Likes, commentaires | Page artiste + stats | Modération des contenus |
+| Abonnements, playlists | Miniature automatique | Gestion des utilisateurs (création, rôles, bannissement) |
+| Historique de lecture | Publication directe | Fiche détaillée par utilisateur |
+| Signalements (7 motifs) | Badge vérifié | Journal de modération complet |
+| Profil éditable | — | Statistiques + jauge de stockage |
+
 ## Documentation
 
 - **[Architecture](docs/ARCHITECTURE.md)** — Stack, base de données, sécurité, phases
