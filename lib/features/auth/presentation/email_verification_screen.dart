@@ -42,11 +42,22 @@ class EmailVerificationScreen extends ConsumerWidget {
                   email == null
                       ? 'Nous t\'avons envoyé un lien de confirmation. '
                             'Clique dessus pour activer ton compte.'
-                      : 'Nous avons envoyé un lien de confirmation à $email. '
-                            'Clique dessus pour activer ton compte.',
+                      : 'Un lien de confirmation a été envoyé à $email. '
+                            'Vérifie ta boîte de réception (et tes spams).',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Si tu possèdes déjà un compte, nous t\'avons renvoyé le lien. '
+                  'Tu peux aussi te connecter avec Google si tu avais utilisé '
+                  'ce bouton la première fois.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.4,
                   ),
                 ),
                 const SizedBox(height: 28),

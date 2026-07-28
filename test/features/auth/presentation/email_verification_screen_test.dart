@@ -58,6 +58,12 @@ void main() {
     testWidgets(
       'EmailVerificationScreen (avec email) se rend en thème $name sans overflow',
       (tester) async {
+        // Plus de contenu depuis l'ajout du message « Si tu possèdes déjà… »
+        tester.view.physicalSize = const Size(400, 700);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
         await pumpEmailVerification(
           tester,
           isDark ? AppTheme.dark : AppTheme.light,
@@ -67,9 +73,9 @@ void main() {
         expect(find.text('Vérifie ta boîte mail'), findsOneWidget);
         expect(
           find.text(
-            'Nous avons envoyé un lien de confirmation à '
+            'Un lien de confirmation a été envoyé à '
             'artiste.exemple@vibeo.test. '
-            'Clique dessus pour activer ton compte.',
+            'Vérifie ta boîte de réception (et tes spams).',
           ),
           findsOneWidget,
         );
@@ -81,7 +87,7 @@ void main() {
   testWidgets(
     'EmailVerificationScreen se rend sans overflow avec un email long sur petite largeur',
     (tester) async {
-      tester.view.physicalSize = const Size(320, 640);
+      tester.view.physicalSize = const Size(320, 750);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);

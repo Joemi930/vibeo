@@ -136,7 +136,9 @@ class AuthController extends AsyncNotifier<void> {
     if (msg.contains('password') && msg.contains('should be')) {
       return 'Le mot de passe est trop court (6 caractères minimum).';
     }
-    if (msg.contains('rate limit') || msg.contains('too many')) {
+    if (msg.contains('rate limit') ||
+        msg.contains('too many') ||
+        msg.contains('security purposes')) {
       return 'Trop de tentatives. Réessaie dans quelques minutes.';
     }
     if (msg.contains('database error') || msg.contains('querying schema')) {
