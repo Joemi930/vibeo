@@ -96,11 +96,6 @@ supabase functions deploy purge-identity-docs
 supabase functions serve
 ```
 
-### Tester les Edge Functions
-```bash
-deno test --allow-net --allow-env supabase/functions/tests/
-```
-
 ## Structure du projet
 
 ```
@@ -123,8 +118,7 @@ lib/
 supabase/
   migrations/     # Fichiers SQL versionnés
   functions/      # Edge Functions (Deno / TypeScript)
-    _shared/      # Code partagé (require-admin, ai-provider, etc.)
-    tests/        # Tests Deno
+    _shared/      # Code partagé (require-admin)
 test/             # Tests Flutter (miroir de lib/)
 docs/             # Documentation
 Maquettes/        # Maquettes HTML de référence
@@ -156,10 +150,9 @@ Le déploiement GitHub Pages est automatique à chaque push sur `main` (workflow
 
 ## Comptes de test
 
-| Rôle | Email | Usage |
-|---|---|---|
-| Admin | `Admin@admin.test` | Dashboard, modération, signalements, gestion utilisateurs |
-| Admin | `joemitete12@gmail.com` | Admin principal |
+| Rôle | Email | Mot de passe | Usage |
+|---|---|---|---|
+| Admin | `Test_admin@test.com` | `Test_123` | Dashboard, modération, signalements, gestion utilisateurs |
 
 > 💡 **Astuce :** Si l'inscription par email/mot de passe ne fonctionne pas (erreur
 > « Email not confirmed » ou email de confirmation jamais reçu), désactive la

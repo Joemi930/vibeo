@@ -17,7 +17,6 @@ YouTube / YouTube Music. **Android + Web**, une seule codebase Flutter.
 | Navigation | **go_router** — deep links, hash URL strategy |
 | Backend | **Supabase** — Postgres + Auth + Storage + Edge Functions |
 | Hébergement | **GitHub Pages** — déploiement automatique via GitHub Actions |
-| IA | **Gemini API** (multimodal, tier gratuit) via Edge Functions |
 | CI | **GitHub Actions** — analyze, tests, build, déploiement |
 
 ## Lancer en local

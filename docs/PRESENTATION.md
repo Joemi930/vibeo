@@ -1,14 +1,14 @@
 # Vibeo — Dossier de présentation V1
 
 > Plateforme de publication de clips vidéos pour artistes vérifiés.
-> Projet portfolio — Joemi Tete · Juillet 2026
+> Projet tutoréç 
 
 ---
 
 ## 🎯 Qu'est-ce que Vibeo ?
 
 Vibeo est une plateforme où les **artistes vérifiés** publient leurs clips
-musicaux. Le public les découvre, les écoute en mode audio (écran éteint),
+musicaux. Le public les découvre, les écoute en mode audio (écran éteint) ou vidéo (de base),
 s'abonne aux artistes, crée des playlists, et signale les contenus
 problématiques.
 
@@ -17,7 +17,7 @@ arrière-plan), avec une vérification d'identité des artistes et un dashboard
 d'administration.
 
 **Stack :** Flutter (Android + Web) · Supabase (Postgres, Auth, Storage) ·
-GitHub Pages · Gemini IA
+GitHub Pages 
 
 ---
 
@@ -33,7 +33,7 @@ GitHub Pages · Gemini IA
 │   (720p max, 60 Mo / 4 min)        └───────────┬──────────────┘
 └──────────────────────────┘                     │
                                       ┌──────────▼──────────────┐
-                                      │   Gemini API (IA)        │
+                                      │          │
                                       │   Modération + Vérif.    │
                                       │   artistes dans les      │
                                       │   Edge Functions         │
@@ -44,7 +44,6 @@ GitHub Pages · Gemini IA
 - **Budget infra : 0 €** — tout tient dans le tier gratuit Supabase + GitHub Pages
 - **Compression sur l'appareil** : 720p AVANT upload, jamais de transcodage serveur
 - **RLS (Row Level Security)** activé sur chaque table — le client ne peut pas tricher
-- **IA** : Gemini (multimodal) pour la modération de contenu et la vérification d'identité
 
 ---
 
@@ -109,8 +108,8 @@ GitHub Pages · Gemini IA
 
 | Rôle | Email | Mot de passe |
 |---|---|---|
-| **Admin** | `Admin@admin.test` | *(défini lors de la création)* |
-| **Admin** | `joemitete12@gmail.com` | Ton mot de passe Google |
+| **Admin** | `Test_admin@test.com` | Test_123 |
+
 
 > Pour créer un compte auditeur ou artiste : utilise l'écran d'inscription
 > (email + mot de passe) ou « Se connecter avec Google ».

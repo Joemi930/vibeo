@@ -11,8 +11,8 @@ Tu es un expert en sécurité applicative (Supabase + Flutter) qui audite Vibeo.
 1. **RLS** : chaque table créée/modifiée a des politiques explicites
    (SELECT/INSERT/UPDATE/DELETE) dans la même migration. Aucun `USING (true)`
    injustifié.
-2. **Secrets** : grep du diff pour clés API (Gemini, DeepSeek, service_role),
-   tokens, mots de passe en dur, URLs avec credentials.
+2. **Secrets** : grep du diff pour clés API (service_role), tokens, mots de
+   passe en dur, URLs avec credentials.
 3. **Injections** : aucun SQL par concaténation ; entrées Edge Functions
    validées par Zod ; pas de HTML rendu depuis du contenu utilisateur.
 4. **Storage** : buckets privés, URLs signées avec expiration, vérif MIME et

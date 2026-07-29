@@ -9,7 +9,6 @@ import '../../domain/admin_application.dart';
 import '../providers/admin_providers.dart';
 import '../widgets/admin_data_table.dart';
 import '../widgets/review_panel.dart';
-import '../widgets/score_bar.dart';
 
 /// Onglet « Candidatures » du dashboard admin.
 ///
@@ -80,7 +79,6 @@ class _ApplicationsTable extends ConsumerWidget {
     final columns = const [
       ColumnDef(label: 'Artiste', flex: 1.6),
       ColumnDef(label: 'Date', flex: 1.0),
-      ColumnDef(label: 'Score IA', flex: 1.4),
       ColumnDef(label: 'Statut', flex: 1.0),
       ColumnDef(label: 'Actions', flex: 1.5, alignment: Alignment.centerRight),
     ];
@@ -146,16 +144,6 @@ class _ApplicationsTable extends ConsumerWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-
-        // Colonne Score IA
-        app.aiScore != null
-            ? ScoreBar(score: app.aiScore!, showLabel: false)
-            : Text(
-                '—',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
 
         // Colonne Statut
         _StatusBadge(status: app.status),

@@ -52,20 +52,6 @@ class AdminApplication {
       ? displayName!
       : username;
 
-  /// Points de vérification textuels renvoyés par l'IA (`ai_analysis.checks`
-  /// si présent), utilisés par le rapport du panneau d'examen.
-  List<AiCheck> get aiChecks {
-    final raw = aiAnalysis?['checks'];
-    if (raw is! List) return const [];
-    return raw
-        .whereType<Map>()
-        .map((e) => AiCheck.fromJson(e.cast<String, dynamic>()))
-        .toList();
-  }
-
-  /// Résumé libre de l'analyse, s'il existe.
-  String? get aiSummary => aiAnalysis?['summary'] as String?;
-
   factory AdminApplication.fromJson(Map<String, dynamic> json) {
     return AdminApplication(
       id: json['id'] as String,
@@ -93,21 +79,6 @@ class AdminApplication {
       decidedAt: json['decided_at'] == null
           ? null
           : DateTime.parse(json['decided_at'] as String),
-    );
-  }
-}
-
-/// Une ligne de vérification du rapport IA (« Identité cohérente… »).
-class AiCheck {
-  const AiCheck({required this.label, required this.passed});
-
-  final String label;
-  final bool passed;
-
-  factory AiCheck.fromJson(Map<String, dynamic> json) {
-    return AiCheck(
-      label: json['label'] as String? ?? '',
-      passed: json['passed'] as bool? ?? false,
     );
   }
 }

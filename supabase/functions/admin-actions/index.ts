@@ -410,123 +410,159 @@ Deno.serve(async (req: Request) => {
       case 'get_user_detail': {
         const userId = body.userId;
 
-        // Profil
-        const { data: profile } = await adminClient
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
+        try {
+          // Profil
+          const { data: profile, error: profileErr } = await adminClient
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
 
-        if (!profile) {
-          return jsonResponse({ error: 'Utilisateur introuvable.' }, 404);
+          if (profileErr) {
+            console.error(`get_user_detail(${userId}): profil erreur`, profileErr);
+            return jsonResponse({ error: 'Erreur lors de la lecture du profil.' }, 500);
+          }
+          if (!profile) {
+            return jsonResponse({ error: 'Utilisateur introuvable.' }, 404);
+          }
+
+          // Infos Auth (email, dernière connexion, banni ?)
+          const { data: authUser, error: authErr } = await adminClient.auth.admin
+            .getUserById(userId);
+          if (authErr) {
+            console.error(`get_user_detail(${userId}): auth erreur`, authErr);
+          }
+
+          // Vidéos (si artiste)
+          const { data: videos, error: videosErr } = await adminClient
+            .from('videos')
+            .select('*')
+            .eq('artist_id', userId)
+            .order('created_at', { ascending: false });
+          if (videosErr) {
+            console.error(`get_user_detail(${userId}): videos erreur`, videosErr);
+          }
+
+          // Commentaires
+          const { data: comments, error: commentsErr } = await adminClient
+            .from('comments')
+            .select('*')
+            .eq('author_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(100);
+          if (commentsErr) {
+            console.error(`get_user_detail(${userId}): comments erreur`, commentsErr);
+          }
+
+          // Playlists
+          const { data: playlists, error: playlistsErr } = await adminClient
+            .from('playlists')
+            .select('*')
+            .eq('owner_id', userId)
+            .order('created_at', { ascending: false });
+          if (playlistsErr) {
+            console.error(`get_user_detail(${userId}): playlists erreur`, playlistsErr);
+          }
+
+          // Abonnements (qui cet utilisateur suit)
+          const { data: subscriptions, error: subsErr } = await adminClient
+            .from('subscriptions')
+            .select('artist_id, created_at')
+            .eq('subscriber_id', userId);
+          if (subsErr) {
+            console.error(`get_user_detail(${userId}): subscriptions erreur`, subsErr);
+          }
+
+          // Abonnés (qui suit cet utilisateur)
+          const { data: subscribers, error: subbersErr } = await adminClient
+            .from('subscriptions')
+            .select('subscriber_id, created_at')
+            .eq('artist_id', userId);
+          if (subbersErr) {
+            console.error(`get_user_detail(${userId}): subscribers erreur`, subbersErr);
+          }
+
+          // Signalements émis par cet utilisateur
+          const { data: reportsFiled, error: reportsFErr } = await adminClient
+            .from('reports')
+            .select('*')
+            .eq('reporter_id', userId)
+            .order('created_at', { ascending: false });
+          if (reportsFErr) {
+            console.error(`get_user_detail(${userId}): reportsFiled erreur`, reportsFErr);
+          }
+
+          // Signalements contre cet utilisateur
+          const { data: reportsAgainst, error: reportsAErr } = await adminClient
+            .from('reports')
+            .select('*')
+            .eq('target_author_id', userId)
+            .order('created_at', { ascending: false });
+          if (reportsAErr) {
+            console.error(`get_user_detail(${userId}): reportsAgainst erreur`, reportsAErr);
+          }
+
+          // Journal de modération
+          const { data: modLogs, error: modErr } = await adminClient
+            .from('moderation_logs')
+            .select('*')
+            .eq('target_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(50);
+          if (modErr) {
+            console.error(`get_user_detail(${userId}): modLogs erreur`, modErr);
+          }
+
+          // Résoudre les noms d'artistes pour les abonnements
+          const artistIds = [
+            ...new Set([
+              ...(subscriptions ?? []).map((s: any) => s.artist_id),
+              ...(subscribers ?? []).map((s: any) => s.subscriber_id),
+            ]),
+          ];
+          const { data: usernames } = artistIds.length > 0
+            ? await adminClient
+                .from('profiles')
+                .select('id, username, display_name, avatar_url')
+                .inFilter('id', artistIds as string[])
+            : { data: [] };
+
+          const usernameMap = new Map(
+            (usernames ?? []).map((u: any) => [u.id, u]),
+          );
+
+          return jsonResponse({
+            profile,
+            auth: {
+              email: authUser?.user?.email ?? null,
+              lastSignInAt: authUser?.user?.last_sign_in_at ?? null,
+              createdAt: authUser?.user?.created_at ?? null,
+              isBanned: authUser?.user?.banned_until != null
+                ? authUser.user.banned_until > new Date().toISOString()
+                : false,
+              bannedUntil: authUser?.user?.banned_until ?? null,
+            },
+            videos: videos ?? [],
+            comments: comments ?? [],
+            playlists: playlists ?? [],
+            subscriptions: (subscriptions ?? []).map((s: any) => ({
+              ...s,
+              artistUsername: usernameMap.get(s.artist_id)?.username ?? null,
+              artistDisplayName: usernameMap.get(s.artist_id)?.display_name ?? null,
+            })),
+            subscribers: (subscribers ?? []).map((s: any) => ({
+              ...s,
+              subscriberUsername: usernameMap.get(s.subscriber_id)?.username ?? null,
+              subscriberDisplayName: usernameMap.get(s.subscriber_id)?.display_name ?? null,
+            })),
+            reportsFiled: reportsFiled ?? [],
+            reportsAgainst: reportsAgainst ?? [],
+            moderationLogs: modLogs ?? [],
+          }, 200);
+        } catch (err) {
+          console.error(`get_user_detail(${userId}): exception`, err);
+          return jsonResponse({ error: `Erreur inattendue: ${String(err)}` }, 500);
         }
-
-        // Infos Auth (email, dernière connexion, banni ?)
-        const { data: authUser } = await adminClient.auth.admin
-          .getUserById(userId);
-
-        // Vidéos (si artiste)
-        const { data: videos } = await adminClient
-          .from('videos')
-          .select('*')
-          .eq('artist_id', userId)
-          .order('created_at', { ascending: false });
-
-        // Commentaires
-        const { data: comments } = await adminClient
-          .from('comments')
-          .select('*')
-          .eq('author_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(100);
-
-        // Playlists
-        const { data: playlists } = await adminClient
-          .from('playlists')
-          .select('*')
-          .eq('owner_id', userId)
-          .order('created_at', { ascending: false });
-
-        // Abonnements (qui cet utilisateur suit)
-        const { data: subscriptions } = await adminClient
-          .from('subscriptions')
-          .select('artist_id, created_at')
-          .eq('subscriber_id', userId);
-
-        // Abonnés (qui suit cet utilisateur)
-        const { data: subscribers } = await adminClient
-          .from('subscriptions')
-          .select('subscriber_id, created_at')
-          .eq('artist_id', userId);
-
-        // Signalements émis par cet utilisateur
-        const { data: reportsFiled } = await adminClient
-          .from('reports')
-          .select('*')
-          .eq('reporter_id', userId)
-          .order('created_at', { ascending: false });
-
-        // Signalements contre cet utilisateur
-        const { data: reportsAgainst } = await adminClient
-          .from('reports')
-          .select('*')
-          .eq('target_author_id', userId)
-          .order('created_at', { ascending: false });
-
-        // Journal de modération
-        const { data: modLogs } = await adminClient
-          .from('moderation_logs')
-          .select('*')
-          .eq('target_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        // Résoudre les noms d'artistes pour les abonnements
-        const artistIds = [
-          ...new Set([
-            ...(subscriptions ?? []).map((s: any) => s.artist_id),
-            ...(subscribers ?? []).map((s: any) => s.subscriber_id),
-          ]),
-        ];
-        const { data: usernames } = artistIds.length > 0
-          ? await adminClient
-              .from('profiles')
-              .select('id, username, display_name, avatar_url')
-              .inFilter('id', artistIds as string[])
-          : { data: [] };
-
-        const usernameMap = new Map(
-          (usernames ?? []).map((u: any) => [u.id, u]),
-        );
-
-        return jsonResponse({
-          profile,
-          auth: {
-            email: authUser?.user?.email ?? null,
-            lastSignInAt: authUser?.user?.last_sign_in_at ?? null,
-            createdAt: authUser?.user?.created_at ?? null,
-            isBanned: authUser?.user?.banned_until != null
-              ? authUser.user.banned_until > new Date().toISOString()
-              : false,
-            bannedUntil: authUser?.user?.banned_until ?? null,
-          },
-          videos: videos ?? [],
-          comments: comments ?? [],
-          playlists: playlists ?? [],
-          subscriptions: (subscriptions ?? []).map((s: any) => ({
-            ...s,
-            artistUsername: usernameMap.get(s.artist_id)?.username ?? null,
-            artistDisplayName: usernameMap.get(s.artist_id)?.display_name ?? null,
-          })),
-          subscribers: (subscribers ?? []).map((s: any) => ({
-            ...s,
-            subscriberUsername: usernameMap.get(s.subscriber_id)?.username ?? null,
-            subscriberDisplayName: usernameMap.get(s.subscriber_id)?.display_name ?? null,
-          })),
-          reportsFiled: reportsFiled ?? [],
-          reportsAgainst: reportsAgainst ?? [],
-          moderationLogs: modLogs ?? [],
-        }, 200);
       }
 
       case 'ban_user': {

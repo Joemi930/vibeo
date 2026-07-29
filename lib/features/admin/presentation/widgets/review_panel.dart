@@ -5,14 +5,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../domain/admin_application.dart';
 import '../providers/admin_providers.dart';
 import 'confirm_action_dialog.dart';
-import 'score_bar.dart';
 import 'secure_document_viewer.dart';
 
 /// Panneau d'examen d'une candidature artiste (volet droit de 384 px).
 ///
-/// Affiche les informations du candidat, le rapport IA (checks convertis en
-/// libellés français), le document d'identité via [SecureDocumentViewer], et
-/// les boutons Approuver / Rejeter.
+/// Affiche les informations du candidat, le document d'identité via
+/// [SecureDocumentViewer], et les boutons Approuver / Rejeter.
 ///
 /// Le rejet exige un motif saisi dans [showConfirmActionDialog].
 class ReviewPanel extends ConsumerWidget {
@@ -128,12 +126,6 @@ class ReviewPanel extends ConsumerWidget {
 
                 const SizedBox(height: 16),
 
-                // Score IA
-                if (application.aiScore != null) ...[
-                  _buildAIScoreCard(context, vibeo),
-                  const SizedBox(height: 16),
-                ],
-
                 // Document d'identité
                 if (application.hasDocument)
                   SecureDocumentViewer(applicationId: application.id),
@@ -220,106 +212,6 @@ class ReviewPanel extends ConsumerWidget {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAIScoreCard(BuildContext context, VibeoColors vibeo) {
-    final theme = Theme.of(context);
-    final checks = application.aiChecks;
-    final score = application.aiScore ?? 0.0;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainer,
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // En-tête : icône IA + score global
-          Row(
-            children: [
-              Icon(Icons.auto_awesome_rounded, size: 18, color: vibeo.info),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  'Rapport IA',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(
-                '${score.round()}',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: score >= 80
-                      ? vibeo.success
-                      : score >= 40
-                      ? vibeo.warning
-                      : theme.colorScheme.error,
-                ),
-              ),
-              Text(
-                '/100',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Barre de score
-          ScoreBar(score: score, showLabel: false),
-          const SizedBox(height: 12),
-
-          // Checks individuels
-          if (checks.isNotEmpty)
-            for (final check in checks)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 7),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      check.passed
-                          ? Icons.check_circle_rounded
-                          : Icons.warning_rounded,
-                      size: 16,
-                      color: check.passed ? vibeo.success : vibeo.warning,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        check.label,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-          // Résumé IA (si présent)
-          if (application.aiSummary != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              application.aiSummary!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontStyle: FontStyle.italic,
-                height: 1.4,
-              ),
-            ),
-          ],
         ],
       ),
     );

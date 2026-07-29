@@ -127,24 +127,14 @@ La vue ne contient donc que des identifiants et des scores, et n'est accessible
 vérifie qu'une vidéo passée en `removed` disparaît **immédiatement**, sans
 rafraîchissement.
 
-## 8. DeepSeek est implémenté mais n'est pas le moteur par défaut
+## 8. La vérification IA a été retirée (Phase 7)
 
-Le propriétaire du projet souhaitait initialement DeepSeek par défaut, ayant des
-crédits dessus. Deux faits vérifiés dans la documentation officielle ont inversé
-la décision :
-
-- **DeepSeek ne lit pas les images.** Son API est texte seul, aucun modèle vision
-  n'y est servi. Or le cœur de la Phase 4 est l'analyse d'une carte d'identité :
-  sous DeepSeek, 100 % des candidatures partiraient en revue manuelle.
-- **DeepSeek est payant, Gemini Flash est gratuit.** DeepSeek fonctionne au
-  prépaiement, sans palier gratuit. Le raisonnement « utilisons celui où j'ai des
-  crédits » était exactement inversé.
-
-Gemini est donc le défaut. DeepSeek est implémenté en entier et activable par
-`AI_PROVIDER=deepseek` — l'abstraction que promettait l'architecture est réelle,
-pas décorative. À noter : `deepseek-chat` et `deepseek-reasoner` ont été
-dépréciés le 24 juillet 2026 ; les modèles servis sont `deepseek-v4-flash` et
-`deepseek-v4-pro`.
+La vérification IA des candidatures a été entièrement retirée à la Phase 7.
+Toute candidature valide est désormais approuvée automatiquement après les
+contrôles de base (doublon, rate limit, validité du document). La fiabilité
+insuffisante de l'IA sur les documents d'identité (trop de faux positifs) et
+la complexité opérationnelle (gestion des clés, coûts) ne justifiaient pas
+son maintien pour un projet de cette taille.
 
 ## 9. Il n'y a pas de CORS de bucket à configurer
 

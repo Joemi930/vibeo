@@ -14,16 +14,8 @@
 │   └── App Web (GitHub Pages) │  HTTPS │   ├── Auth (email + Google)  │
 │                             │        │   ├── Storage (vidéos, imgs, │
 │   Compression vidéo         │        │   │    docs d'identité)      │
-│   on-device (ffmpeg_kit)    │        │   ├── Edge Functions (Deno)  │
+│   on-device (video_compress) │        │   ├── Edge Functions (Deno)  │
 └─────────────────────────────┘        │   └── Realtime (compteurs)   │
-                                       └───────────┬──────────────────┘
-                                                   │
-                                       ┌───────────▼──────────────────┐
-                                       │  IA (abstraction provider)   │
-                                       │  Gemini (défaut, multimodal) │
-                                       │  ou DeepSeek (texte)         │
-                                       │  ├── Vérif. artistes + CNI   │
-                                       │  └── Modération contenu      │
                                        └──────────────────────────────┘
 ```
 
@@ -39,17 +31,7 @@
 | Lecture vidéo | **video_player** | Streaming progressif MP4 (`chewie` retiré : lecteur écrit à la main pour coller aux maquettes) |
 | Audio arrière-plan | **just_audio** + **audio_service** | Notification média, mode "YT Music" |
 | Compression vidéo | **video_compress** (Android) · **WebCodecs + mediabunny** (web) | 720p AVANT upload → budget 0 € (voir note ci-dessous) |
-| IA | **Gemini API** (tier gratuit, multimodal) via Edge Functions | Vérif. artistes + carte d'identité + modération. Abstraction provider → bascule DeepSeek possible (texte uniquement) |
 | CI | **GitHub Actions** | analyze + tests + build à chaque push |
-
-### Abstraction IA (Edge Functions)
-Un module `_shared/ai-provider.ts` expose `analyzeText()` et `analyzeImage()`.
-Implémentation par défaut : **Gemini** (tier gratuit + multimodal, indispensable
-pour analyser cartes d'identité et miniatures). Implémentation alternative :
-DeepSeek (texte seulement — si choisi, l'analyse d'images est désactivée et la
-vérification d'identité passe systématiquement en revue manuelle admin).
-Le choix se fait par la variable d'env `AI_PROVIDER` (gemini | deepseek).
-Les clés API vivent UNIQUEMENT dans les secrets Edge Functions.
 
 ### Stratégie vidéo à 0 €
 1. Compression SUR L'APPAREIL (H.264/AAC, 720p max, plafond **60 Mo / 4 min**).
@@ -124,7 +106,7 @@ profiles              (id PK → auth.users, username UNIQUE, display_name,
 
 artist_applications   (id PK, user_id FK, stage_name, links JSONB,
                        statement TEXT, id_document_path TEXT,
-                       ai_score NUMERIC, ai_analysis JSONB,
+                       ai_score NUMERIC, ai_analysis JSONB,  -- vestigial (Phase 7)
                        status ENUM[pending|approved|rejected|manual_review],
                        reviewed_by FK NULL, created_at, decided_at)
 
@@ -159,38 +141,36 @@ moderation_logs       (id PK, actor ENUM[ai|admin], target_type, target_id,
 - Tendances = vue matérialisée sur view_events (fenêtre 7 jours), cron pg.
 - Recommandations = scoring SQL simple : genres écoutés × popularité récente.
 
-## 4. Vérification d'artiste avec carte d'identité
+## 4. Vérification d'artiste (Phase 7 — automatique)
 
 Parcours : formulaire (nom de scène, liens, présentation) + **upload obligatoire
 de la carte d'identité** (photo/scan) → Edge Function `verify-artist` :
 
-1. Le document part dans le bucket privé `identity-docs` (voir règles §5.4).
-2. L'IA (Gemini, multimodal) analyse : lisibilité du document, cohérence
-   nom/prénom vs profil, signes évidents de falsification, cohérence des liens
-   fournis (réseaux, plateformes) → `ai_score` 0-100 + rapport `ai_analysis`.
-3. Décision : score ≥ 80 ET document jugé lisible/cohérent → **approved** auto ·
-   score ≤ 30 ou document illisible/incohérent → **rejected** auto avec motif ·
-   entre les deux → **manual_review** (file d'attente admin avec le rapport IA).
-4. L'admin qui traite un `manual_review` voit le document via URL signée
-   très courte (5 min) et confirme/rejette.
+1. Le document part dans le bucket privé `identity-docs` (voir règles §6).
+2. Contrôles préalables : l'utilisateur n'est pas déjà artiste/admin, n'a pas
+   déjà une candidature en cours, respecte le rate limit d'1/semaine.
+3. La candidature est **approuvée automatiquement** et l'utilisateur promu
+   artiste immédiatement.
+4. L'admin peut consulter le document via URL signée très courte (5 min).
+   Chaque consultation est journalisée.
 
 **Protection des documents d'identité (donnée ultra-sensible) :**
 - Bucket `identity-docs` : accès en lecture UNIQUEMENT aux admins (RLS storage),
   jamais listable publiquement, aucune URL longue durée.
 - Le document est **supprimé automatiquement** (cron pg + storage) dès que la
   candidature est décidée, avec un délai maximum de 30 jours (minimisation des
-  données). Seul le verdict et le rapport IA (sans données brutes du document)
-  sont conservés.
-- Aucun contenu du document (numéro, adresse…) n'est stocké en base — seul
-  un booléen de cohérence et le score.
+  données).
+- Aucun contenu du document (numéro, adresse…) n'est stocké en base.
 
-## 5. Fonctions IA (Edge Functions)
+## 5. Edge Functions
 
 | Fonction | Déclencheur | Logique |
 |---|---|---|
-| `verify-artist` | Nouvelle candidature | Analyse dossier + carte d'identité (voir §4) |
-| `moderate-video` | Vidéo uploadée (`pending_moderation`) | Analyse titre + description + miniature → publication auto ou file admin |
-| `process-report` | Signalement créé | Priorisation automatique (gravité) |
+| `verify-artist` | Nouvelle candidature | Contrôles + approbation automatique |
+| `admin-actions` | Action admin (dashboard) | Point d'entrée unique : modération, gestion utilisateurs, candidatures |
+| `moderate-video` | Vidéo uploadée (`pending_moderation`) | Analyse titre + description → file admin ou reprise cron |
+| `delete-account` | Demande utilisateur | Suppression de compte (auth + données) |
+| `purge-identity-docs` | Cron (30 jours) | Suppression des documents d'identité orphelins |
 
 ## 6. Sécurité (niveau maximal)
 
@@ -203,8 +183,8 @@ de la carte d'identité** (photo/scan) → Edge Function `verify-artist` :
    par concaténation, vérification du rôle côté serveur.
 5. **Rate limiting** : 5 uploads/jour/artiste, 30 commentaires/h,
    1 candidature/semaine, 20 signalements/jour.
-6. **Secrets** : .env jamais commité (hook + .gitignore), service_role et clés
-   IA jamais dans l'app.
+6. **Secrets** : .env jamais commité (hook + .gitignore), service_role
+   jamais dans l'app.
 7. **Web (GitHub Pages)** : déploiement automatique via GitHub Actions (`pages.yml`).
 8. **Client** : contenu utilisateur affiché en texte brut, jamais de HTML injecté.
 9. **CI** : analyze + tests bloquants, scan de secrets (gitleaks).
@@ -255,7 +235,7 @@ documentés ici pour ne pas être re-découverts comme des défauts :
 | **P1 — Fondations + Auth** | Projet Flutter, thème, router, Supabase, CI, inscription/connexion/Google, profils, rôles | ✅ |
 | **P2 — Vidéo** | Upload + compression, storage, lecteur, mini-player, audio background | ✅ |
 | **P3 — Social** | Likes, commentaires, abonnements, playlists, partage, recherche, genres | ✅ |
-| **P4 — IA & vérification** | Candidature artiste + carte d'identité, modération vidéos, signalements | ✅ |
+| **P4 — Vérification artiste** | Candidature artiste + carte d'identité, modération vidéos, signalements | ✅ |
 | **P5 — Découverte** | Tendances, recommandations | ✅ |
 | **P6 — Admin & durcissement** | Dashboard admin, revue sécurité complète, tests d'intégration, polish | ✅ |
 | **P7 — Gestion utilisateurs** | Recherche, filtres, fiche détaillée, création de comptes, bannissement, journal par utilisateur | ✅ |

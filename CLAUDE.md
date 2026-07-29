@@ -36,10 +36,7 @@ Tu es l'architecte et le chef d'équipe, pas le développeur de base :
     `docs/ARCHITECTURE.md` §2.
   - Web : **WebCodecs**, piloté par `mediabunny` (copie vendorée dans
     `web/js/`, MPL-2.0) via le module `web/js/vibeo_media.js`.
-- **IA : Gemini API** (défaut, multimodal, tier gratuit) via le module
-  `supabase/functions/_shared/ai-provider.ts` — abstraction permettant de
-  basculer sur DeepSeek (`AI_PROVIDER=deepseek`, texte uniquement).
-  Clés IA UNIQUEMENT dans les secrets Edge Functions.
+- **Sans IA** : la vérification des artistes est automatique (Phase 7).
 - Web sur **GitHub Pages**, CI sur **GitHub Actions**
 
 ## Commandes
@@ -83,8 +80,8 @@ PROMPTS/         # prompts de phase fournis par l'utilisateur
 ## Règles de sécurité — NON NÉGOCIABLES
 1. RLS activé sur **chaque** table dès sa création ; la migration qui crée une
    table inclut ses politiques dans le même fichier.
-2. service_role, clé Gemini/DeepSeek : jamais dans le code Flutter ni le repo —
-   secrets Edge Functions / variables d'env uniquement.
+2. service_role : jamais dans le code Flutter ni le repo — secrets Edge
+   Functions / variables d'env uniquement.
 3. Ne jamais committer `.env*` (le hook le bloque, ne pas contourner).
 4. Buckets Storage privés ; accès uniquement par URL signée. Vérifier MIME +
    taille côté Edge Function.
@@ -152,5 +149,3 @@ corrects ✚ audit sécurité passé si zone sensible.
 - `audio_service` nécessite une configuration AndroidManifest spécifique.
 - Tier gratuit Supabase : 1 Go de storage — afficher l'usage dans l'admin.
 - URLs signées Supabase sur web : configurer CORS du bucket.
-- Vérifier les noms de modèles Gemini/DeepSeek dans leur doc officielle au
-  moment de l'implémentation (ils évoluent vite).

@@ -30,10 +30,7 @@ Tu es l'architecte et le chef d'équipe, pas le développeur de base :
   arrière-plan)
 - **ffmpeg_kit_flutter** : compression H.264 720p SUR L'APPAREIL avant upload
   (jamais de transcodage serveur — budget 0 €)
-- **IA : Gemini API** (défaut, multimodal, tier gratuit) via le module
-  `supabase/functions/_shared/ai-provider.ts` — abstraction permettant de
-  basculer sur DeepSeek (`AI_PROVIDER=deepseek`, texte uniquement).
-  Clés IA UNIQUEMENT dans les secrets Edge Functions.
+- **Sans IA** : la vérification des artistes est automatique (Phase 7).
 - Web sur **Vercel**, CI sur **GitHub Actions**
 
 ## Commandes
@@ -66,7 +63,7 @@ lib/
     settings/
 supabase/
   migrations/    # SQL versionné — TOUTE modif de schéma passe par ici
-  functions/     # _shared/ai-provider.ts, verify-artist/, moderate-video/,
+  functions/     # verify-artist/, moderate-video/,
                  # process-report/
 test/            # miroir de lib/
 integration_test/
@@ -77,8 +74,8 @@ PROMPTS/         # prompts de phase fournis par l'utilisateur
 ## Règles de sécurité — NON NÉGOCIABLES
 1. RLS activé sur **chaque** table dès sa création ; la migration qui crée une
    table inclut ses politiques dans le même fichier.
-2. service_role, clé Gemini/DeepSeek : jamais dans le code Flutter ni le repo —
-   secrets Edge Functions / variables d'env uniquement.
+2. service_role : jamais dans le code Flutter ni le repo — secrets Edge
+   Functions / variables d'env uniquement.
 3. Ne jamais committer `.env*` (le hook le bloque, ne pas contourner).
 4. Buckets Storage privés ; accès uniquement par URL signée. Vérifier MIME +
    taille côté Edge Function.
@@ -115,5 +112,3 @@ corrects ✚ audit sécurité passé si zone sensible.
 - `audio_service` nécessite une configuration AndroidManifest spécifique.
 - Tier gratuit Supabase : 1 Go de storage — afficher l'usage dans l'admin.
 - URLs signées Supabase sur web : configurer CORS du bucket.
-- Vérifier les noms de modèles Gemini/DeepSeek dans leur doc officielle au
-  moment de l'implémentation (ils évoluent vite).
