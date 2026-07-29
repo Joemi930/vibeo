@@ -62,11 +62,23 @@ export async function requireAdmin(req: Request): Promise<AdminGuardResult> {
   const authHeader = req.headers.get('Authorization') ?? '';
   const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
   if (!jwt) {
+    console.error('require-admin: aucun header Authorization');
     return {
       ok: false,
       response: jsonResponse({ error: 'Authentification requise.' }, 401),
     };
   }
+
+  // Diagnostic : nature du token reçu (sans divulguer le token complet).
+  const jwtPreview = jwt.length > 20
+    ? `${jwt.substring(0, 15)}…${jwt.substring(jwt.length - 5)}`
+    : jwt;
+  const isAnonKey =
+    jwt.startsWith('sb_publishable_') || jwt.startsWith('ey');
+  console.log(
+    `require-admin: token reçu — longueur=${jwt.length}, préfixe=${jwtPreview}, ` +
+    `ressemble_à_jwt=${jwt.startsWith('ey')}, ressemble_à_anon=${jwt.startsWith('sb_')}`,
+  );
 
   // Le jeton est validé par GoTrue lui-même : sa signature est réellement
   // vérifiée, on ne se contente pas de le décoder.
@@ -77,9 +89,18 @@ export async function requireAdmin(req: Request): Promise<AdminGuardResult> {
     jwt,
   );
   if (userError || !user) {
+    console.error(
+      'require-admin: getUser() échec —',
+      `message=${userError?.message}, code=${userError?.code}, status=${userError?.status}`,
+    );
     return {
       ok: false,
-      response: jsonResponse({ error: 'Jeton invalide ou expiré.' }, 401),
+      response: jsonResponse({
+        error: 'Jeton invalide ou expiré.',
+        detail: userError?.message ?? null,
+        code: userError?.code ?? null,
+        jwtPreview,
+      }, 401),
     };
   }
 
