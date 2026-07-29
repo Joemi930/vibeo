@@ -7,7 +7,8 @@ import '../providers/admin_providers.dart';
 import 'confirm_action_dialog.dart';
 import 'secure_document_viewer.dart';
 
-/// Panneau d'examen d'une candidature artiste (volet droit de 384 px).
+/// Panneau d'examen d'une candidature artiste (384 px en desktop, plein
+/// écran en mobile).
 ///
 /// Affiche les informations du candidat, le document d'identité via
 /// [SecureDocumentViewer], et les boutons Approuver / Rejeter.
@@ -29,150 +30,163 @@ class ReviewPanel extends ConsumerWidget {
     final vibeo = VibeoColors.of(context);
     final isActing = ref.watch(adminActionControllerProvider);
 
-    return Container(
-      width: 384,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          left: BorderSide(color: theme.colorScheme.outlineVariant),
-        ),
-      ),
-      child: Column(
-        children: [
-          // En-tête
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Examen — ${application.resolvedName}',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                IconButton(
-                  onPressed: onClose,
-                  icon: Icon(
-                    Icons.close_rounded,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  tooltip: 'Fermer',
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // En desktop (conteneur large > 500px), largeur fixe 384 px.
+        // En mobile, prend toute la largeur disponible.
+        final isWide = constraints.maxWidth > 500;
+        return Container(
+          width: isWide ? 384 : null,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            border: Border(
+              left: isWide
+                  ? BorderSide(color: theme.colorScheme.outlineVariant)
+                  : BorderSide.none,
             ),
           ),
-
-          // Contenu défilable
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-              children: [
-                // Informations candidat
-                _buildSectionTitle(context, 'Candidat'),
-                const SizedBox(height: 8),
-                _buildInfoRow(
-                  context,
-                  'Nom de scène',
-                  application.stageName.isNotEmpty
-                      ? application.stageName
-                      : application.resolvedName,
-                ),
-                if (application.displayName != null &&
-                    application.displayName!.isNotEmpty)
-                  _buildInfoRow(
-                    context,
-                    'Nom du profil',
-                    application.displayName!,
-                  ),
-                _buildInfoRow(
-                  context,
-                  'Identifiant',
-                  '@${application.username}',
-                ),
-                if (application.links.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  _buildSectionTitle(context, 'Liens'),
-                  const SizedBox(height: 6),
-                  for (final link in application.links)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
+          child: Column(
+            children: [
+              // En-tête
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Row(
+                  children: [
+                    Expanded(
                       child: Text(
-                        link,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontSize: 11.5,
+                        'Examen — ${application.resolvedName}',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                ],
-                if (application.statement.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  _buildSectionTitle(context, 'Présentation'),
-                  const SizedBox(height: 6),
-                  Text(
-                    application.statement,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      height: 1.5,
+                    IconButton(
+                      onPressed: onClose,
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      tooltip: 'Fermer',
                     ),
-                  ),
-                ],
-
-                const SizedBox(height: 16),
-
-                // Document d'identité
-                if (application.hasDocument)
-                  SecureDocumentViewer(applicationId: application.id),
-
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-
-          // Barre d'actions
-          Container(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: theme.colorScheme.outlineVariant),
+                  ],
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: FilledButton(
-                    onPressed: isActing ? null : () => _approve(context, ref),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: vibeo.success,
-                      foregroundColor: Colors.black,
-                      minimumSize: const Size(0, 48),
+
+              // Contenu défilable
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                  children: [
+                    // Informations candidat
+                    _buildSectionTitle(context, 'Candidat'),
+                    const SizedBox(height: 8),
+                    _buildInfoRow(
+                      context,
+                      'Nom de scène',
+                      application.stageName.isNotEmpty
+                          ? application.stageName
+                          : application.resolvedName,
                     ),
-                    child: const Text('Approuver'),
+                    if (application.displayName != null &&
+                        application.displayName!.isNotEmpty)
+                      _buildInfoRow(
+                        context,
+                        'Nom du profil',
+                        application.displayName!,
+                      ),
+                    _buildInfoRow(
+                      context,
+                      'Identifiant',
+                      '@${application.username}',
+                    ),
+                    if (application.links.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      _buildSectionTitle(context, 'Liens'),
+                      const SizedBox(height: 6),
+                      for (final link in application.links)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(
+                            link,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontSize: 11.5,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    if (application.statement.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _buildSectionTitle(context, 'Présentation'),
+                      const SizedBox(height: 6),
+                      Text(
+                        application.statement,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // Document d'identité
+                    if (application.hasDocument)
+                      SecureDocumentViewer(applicationId: application.id),
+
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+
+              // Barre d'actions
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                decoration: BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: theme.colorScheme.outlineVariant),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: isActing ? null : () => _reject(context, ref),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: theme.colorScheme.error,
-                      foregroundColor: theme.colorScheme.onError,
-                      minimumSize: const Size(0, 48),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: isActing
+                            ? null
+                            : () => _approve(context, ref),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: vibeo.success,
+                          foregroundColor: Colors.black,
+                          minimumSize: const Size(0, 48),
+                        ),
+                        child: const Text('Approuver'),
+                      ),
                     ),
-                    child: const Text('Rejeter'),
-                  ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: isActing
+                            ? null
+                            : () => _reject(context, ref),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: theme.colorScheme.error,
+                          foregroundColor: theme.colorScheme.onError,
+                          minimumSize: const Size(0, 48),
+                        ),
+                        child: const Text('Rejeter'),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

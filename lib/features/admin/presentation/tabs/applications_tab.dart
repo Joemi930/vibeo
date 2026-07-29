@@ -13,7 +13,8 @@ import '../widgets/review_panel.dart';
 /// Onglet « Candidatures » du dashboard admin.
 ///
 /// Affiche la table des candidatures artistes et, lorsqu'une ligne est
-/// sélectionnée, le panneau d'examen [ReviewPanel] en volet droit.
+/// sélectionnée, le panneau d'examen [ReviewPanel] en volet droit (> 800 px)
+/// ou en plein écran (mobile).
 class ApplicationsTab extends ConsumerWidget {
   const ApplicationsTab({super.key});
 
@@ -33,12 +34,23 @@ class ApplicationsTab extends ConsumerWidget {
             ? applications.where((a) => a.id == selectedId).firstOrNull
             : null;
 
-        return Row(
-          children: [
-            // Table
-            Expanded(
-              child: applications.isEmpty
-                  ? EmptyState(
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 800;
+
+            // Mobile : panneau plein écran quand une candidature est sélectionnée
+            if (!wide && selectedApp != null) {
+              return ReviewPanel(
+                application: selectedApp,
+                onClose: () =>
+                    ref.read(selectedApplicationProvider.notifier).close(),
+              );
+            }
+
+            // Mobile : liste seule
+            if (!wide) {
+              return applications.isEmpty
+                  ? const EmptyState(
                       icon: Icons.how_to_reg_rounded,
                       title: 'Aucune candidature',
                       message: 'Les demandes de vérification apparaîtront ici.',
@@ -46,17 +58,34 @@ class ApplicationsTab extends ConsumerWidget {
                   : _ApplicationsTable(
                       applications: applications,
                       selectedId: selectedId,
-                    ),
-            ),
+                    );
+            }
 
-            // Panneau d'examen
-            if (selectedApp != null)
-              ReviewPanel(
-                application: selectedApp,
-                onClose: () =>
-                    ref.read(selectedApplicationProvider.notifier).close(),
-              ),
-          ],
+            // Desktop : split pane
+            return Row(
+              children: [
+                Expanded(
+                  child: applications.isEmpty
+                      ? const EmptyState(
+                          icon: Icons.how_to_reg_rounded,
+                          title: 'Aucune candidature',
+                          message:
+                              'Les demandes de vérification apparaîtront ici.',
+                        )
+                      : _ApplicationsTable(
+                          applications: applications,
+                          selectedId: selectedId,
+                        ),
+                ),
+                if (selectedApp != null)
+                  ReviewPanel(
+                    application: selectedApp,
+                    onClose: () =>
+                        ref.read(selectedApplicationProvider.notifier).close(),
+                  ),
+              ],
+            );
+          },
         );
       },
     );

@@ -60,62 +60,81 @@ class _UserDetailScreenState extends ConsumerState<UserDetailScreen> {
   }
 
   Widget _buildDetail(BuildContext context, AdminUserDetail detail) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // En-tête avec bouton retour
-          _DetailHeader(
-            detail: detail,
-            onBack: widget.onBack,
-            onBan: () => _toggleBan(detail),
-            onChangeRole: () => _showRoleChanger(detail),
-            onDelete: () => _deleteUser(detail),
-          ),
-          const SizedBox(height: 16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 800;
+        final profileCards = Column(
+          children: [
+            _ProfileCard(detail: detail),
+            const SizedBox(height: 12),
+            _AuthCard(detail: detail),
+          ],
+        );
 
-          // Corps avec sections
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Carte profil + auth (largeur fixe)
-                SizedBox(
-                  width: 280,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        _ProfileCard(detail: detail),
-                        const SizedBox(height: 12),
-                        _AuthCard(detail: detail),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // En-tête avec bouton retour
+              _DetailHeader(
+                detail: detail,
+                onBack: widget.onBack,
+                onBan: () => _toggleBan(detail),
+                onChangeRole: () => _showRoleChanger(detail),
+                onDelete: () => _deleteUser(detail),
+              ),
+              const SizedBox(height: 16),
 
-                // Sections détaillées (reste de l'espace)
-                Expanded(
-                  child: Column(
-                    children: [
-                      // Barre d'onglets des sections
-                      _SectionTabs(
-                        detail: detail,
-                        current: _section,
-                        onChanged: (s) => setState(() => _section = s),
+              // Corps avec sections
+              Expanded(
+                child: wide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 280,
+                            child: SingleChildScrollView(child: profileCards),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(child: _buildSectionsColumn(detail)),
+                        ],
+                      )
+                    : SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            profileCards,
+                            const SizedBox(height: 12),
+                            _SectionTabs(
+                              detail: detail,
+                              current: _section,
+                              onChanged: (s) => setState(() => _section = s),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(height: 400, child: _buildSection(detail)),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      // Contenu de la section
-                      Expanded(child: _buildSection(detail)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionsColumn(AdminUserDetail detail) {
+    return Column(
+      children: [
+        _SectionTabs(
+          detail: detail,
+          current: _section,
+          onChanged: (s) => setState(() => _section = s),
+        ),
+        const SizedBox(height: 12),
+        Expanded(child: _buildSection(detail)),
+      ],
     );
   }
 

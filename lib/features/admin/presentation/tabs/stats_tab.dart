@@ -31,39 +31,52 @@ class StatsTab extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Trois cartes statistiques
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
+              // Trois cartes statistiques — responsive
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final wide = constraints.maxWidth >= 700;
+                  final cards = [
+                    _StatCard(
                       icon: Icons.group_rounded,
                       label: 'Utilisateurs',
                       value: formatGroupedCount(stats.userCount),
                       detail:
                           '${formatGroupedCount(stats.artistCount)} artistes vérifiés',
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _StatCard(
+                    _StatCard(
                       icon: Icons.movie_rounded,
                       label: 'Vidéos publiées',
                       value: formatGroupedCount(stats.publishedVideoCount),
                       detail:
                           '${formatGroupedCount(stats.moderationQueueCount)} en modération',
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _StatCard(
+                    _StatCard(
                       icon: Icons.visibility_rounded,
                       label: 'Vues totales',
                       value: formatCompactCount(stats.totalViewCount),
                       detail:
                           '${formatGroupedCount(stats.openReportCount)} signalements ouverts',
                     ),
-                  ),
-                ],
+                  ];
+                  if (wide) {
+                    return Row(
+                      children: [
+                        for (var i = 0; i < cards.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 16),
+                          Expanded(child: cards[i]),
+                        ],
+                      ],
+                    );
+                  }
+                  return Column(
+                    children: [
+                      for (var i = 0; i < cards.length; i++) ...[
+                        if (i > 0) const SizedBox(height: 12),
+                        cards[i],
+                      ],
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
 
