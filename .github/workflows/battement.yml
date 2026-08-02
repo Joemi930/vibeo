@@ -1,0 +1,134 @@
+name: Battement Supabase
+
+# Empêche la mise en pause du projet Supabase.
+#
+# ── Le problème
+#
+# Un projet Supabase sur le plan gratuit est **mis en pause après 7 jours sans
+# activité**. Une fois en pause, l'application entière tombe : plus de lecture,
+# plus d'authentification, plus de stockage. Le réveil est manuel, depuis le
+# tableau de bord. Pour un projet vitrine que personne ne visite pendant deux
+# semaines, c'est la panne garantie le jour de la démonstration.
+#
+# ── Pourquoi ce n'est PAS pg_cron
+#
+# Le projet a déjà trois tâches pg_cron (tendances, purge des documents,
+# reprise de modération). Aucune ne peut résoudre ce problème : **pg_cron
+# s'arrête avec la base qu'il habite**. Un planificateur interne ne peut pas
+# ressusciter le serveur sur lequel il tourne — et tant que la base est
+# vivante, il ne sert à rien pour cet usage.
+#
+# Le battement doit donc venir de l'extérieur. GitHub Actions est déjà dans la
+# pile, gratuit sur un dépôt public, et indépendant de Supabase : c'est
+# exactement ce qu'il faut.
+#
+# ── Ce que fait ce workflow
+#
+# Une requête de lecture sur `genres` — table de référence minuscule, en
+# lecture publique (`grant select ... to anon`). Elle traverse réellement
+# PostgREST puis Postgres, ce qui compte comme activité. Un simple `ping` du
+# domaine ne suffirait pas : il toucherait le répartiteur de charge, pas la
+# base.
+#
+# ── Ce qu'il faut savoir
+#
+# **GitHub désactive les workflows planifiés après 60 jours sans activité sur
+# le dépôt.** C'est le mode de défaillance à connaître : le battement s'arrête
+# tout seul si plus personne ne pousse de commit pendant deux mois, et la base
+# se met alors en pause peu après. GitHub envoie un courriel avant de
+# désactiver — il suffit de rouvrir l'onglet Actions pour réactiver.
+#
+# La planification de GitHub Actions n'est pas ponctuelle : un déclenchement
+# peut être retardé de plusieurs dizaines de minutes en période de charge. Sans
+# importance ici — on dispose de 7 jours de marge et on bat tous les jours.
+
+on:
+  schedule:
+    # Tous les jours à 06h17 UTC. La minute n'est pas ronde volontairement :
+    # les tâches planifiées à :00 sont massivement retardées sur GitHub.
+    - cron: '17 6 * * *'
+  # Permet de réveiller la base à la demande depuis l'onglet Actions, sans
+  # attendre le prochain battement.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: battement
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Réveil de la base
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Interroger la base
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        # `bash` explicite plutôt que le `bash -e` par défaut de GitHub : la
+        # boucle de reprise ci-dessous doit pouvoir encaisser des commandes qui
+        # échouent sans que le script s'arrête à la première tentative ratée.
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::Secrets SUPABASE_URL ou SUPABASE_ANON_KEY absents du dépôt."
+            exit 1
+          fi
+
+          endpoint="${SUPABASE_URL%/}/rest/v1/genres?select=id&limit=1"
+
+          # Trois tentatives espacées : une coupure réseau passagère à 6h du
+          # matin ne doit pas afficher un échec rouge alors que la base va très
+          # bien. En revanche, trois échecs d'affilée sont un vrai signal.
+          for tentative in 1 2 3; do
+            echo "Tentative $tentative/3…"
+
+            # Le fichier est effacé avant chaque tentative. Sans cela, une
+            # tentative qui échoue AVANT d'avoir reçu quoi que ce soit (DNS
+            # injoignable, connexion refusée) laisse curl ne rien écrire, et le
+            # diagnostic ci-dessous réafficherait la réponse de la tentative
+            # précédente — on lirait un corps « valide » sous un échec. Un
+            # diagnostic trompeur est pire que pas de diagnostic.
+            rm -f /tmp/reponse.json
+
+            # La clé voyage en en-tête, jamais dans l'URL : une URL est
+            # journalisée par tous les intermédiaires, y compris ici.
+            # `--write-out` isole le code HTTP du corps de la réponse.
+            http_code=$(curl --silent --show-error \
+              --max-time 30 \
+              --output /tmp/reponse.json \
+              --write-out '%{http_code}' \
+              --header "apikey: ${SUPABASE_ANON_KEY}" \
+              --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+              --header 'Accept: application/json' \
+              "$endpoint") || http_code="000"
+
+            # 200 ne suffit pas : une passerelle peut répondre 200 avec une page
+            # d'erreur. On exige un tableau JSON, c'est-à-dire une réponse qui
+            # ne peut venir que de PostgREST ayant réellement interrogé Postgres.
+            if [ "$http_code" = "200" ] && jq -e 'type == "array"' /tmp/reponse.json > /dev/null 2>&1; then
+              echo "Base joignable — réponse HTTP 200, contenu JSON valide."
+              exit 0
+            fi
+
+            echo "Échec : code HTTP $http_code."
+            # Le corps peut contenir un message d'erreur Supabase utile. Il ne
+            # contient jamais la clé (elle n'est envoyée qu'en en-tête).
+            head -c 300 /tmp/reponse.json 2>/dev/null || true
+            echo ""
+
+            if [ "$tentative" -lt 3 ]; then
+              sleep 20
+            fi
+          done
+
+          echo "::error::La base Supabase n'a pas répondu après 3 tentatives. \
+          Si le projet est en pause, réveille-le depuis le tableau de bord : \
+          https://supabase.com/dashboard/project/_/settings/general"
+          exit 1
