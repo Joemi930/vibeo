@@ -69,9 +69,13 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        # `bash` explicite plutôt que le `bash -e` par défaut de GitHub : la
-        # boucle de reprise ci-dessous doit pouvoir encaisser des commandes qui
-        # échouent sans que le script s'arrête à la première tentative ratée.
+        # GitHub exécute ceci avec `bash --noprofile --norc -e -o pipefail`.
+        # `-e` est donc ACTIF, y compris avec `shell: bash` — ne pas croire le
+        # contraire. La boucle de reprise ci-dessous en tient compte : toute
+        # commande susceptible d'échouer est soit dans une condition `if`, soit
+        # dans une liste `||`, deux cas où `-e` ne déclenche pas de sortie.
+        # Ajouter une commande faillible « nue » dans la boucle la ferait
+        # s'arrêter à la première tentative ratée, ce qui annulerait les reprises.
         shell: bash
         run: |
           set -uo pipefail
