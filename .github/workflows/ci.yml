@@ -5,6 +5,10 @@ on:
     branches: ['**']
   pull_request:
     branches: ['**']
+  # Permet de relancer la CI à la demande depuis l'onglet Actions, sans
+  # dépendre du déclenchement automatique par push — utile lors d'un incident
+  # GitHub où les webhooks push/pull_request sont throttlés côté plateforme.
+  workflow_dispatch:
 
 # Les poussées rapprochées s'annulent : seul le dernier état d'une branche
 # mérite d'être vérifié.
