@@ -74,20 +74,17 @@ jobs:
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define=WEB_BASE_URL="$WEB_BASE_URL"
 
-  edge-functions:
-    name: Tests des Edge Functions
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Installer Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-
-      # Ces tests n'appellent aucun service d'IA réel : `fetch` est remplacé le
-      # temps de chaque cas. Aucune clé n'est donc nécessaire ici, et il ne faut
-      # surtout pas en ajouter — un test qui consomme un quota n'est pas un test.
-      - name: Tests Deno
-        run: deno test --allow-net --allow-env supabase/functions/tests/
+  # Le job « Tests des Edge Functions » (deno test) a été retiré ici.
+  #
+  # Il pointait sur supabase/functions/tests/, qui contenait les tests de
+  # ai-provider.ts et verification-rules.ts. Le retrait complet de l'IA
+  # (commit 89865dc) a supprimé ces deux fichiers avec le code qu'ils
+  # testaient — logique, ils n'avaient plus rien à couvrir — mais a laissé
+  # ce job pointer sur un dossier vide, où `deno test` échoue avec
+  # « Import ... failed, not found » plutôt que de simplement ne rien trouver
+  # à exécuter. Résultat : CI rouge sur main depuis, sans rapport avec un vrai
+  # défaut du code.
+  #
+  # Aucun autre fichier *_test.ts n'existe dans supabase/functions/ à ce jour
+  # (vérifié). Si des tests Deno reviennent pour admin-actions, verify-artist
+  # ou require-admin.ts, réintroduire ce job en pointant sur leur dossier.
