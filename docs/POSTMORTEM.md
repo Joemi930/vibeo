@@ -167,3 +167,4 @@ sans quoi l'application se bloquerait elle-même.
 - **Un projet Supabase gratuit est mis en pause après 7 jours d'inactivité.** Le
   planificateur s'arrête avec lui : tendances figées, purges non exécutées. À
   savoir avant une démonstration après une longue pause.
+
