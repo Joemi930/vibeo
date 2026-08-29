@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Sans l'historique complet, gitleaks ne scanne que l'état courant :
           # une clé committée puis retirée passerait inaperçue alors qu'elle
@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
 
       - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
           # Exigé par gitleaks-action dès que l'événement est une pull request :
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Installer Flutter
         uses: subosito/flutter-action@v2
