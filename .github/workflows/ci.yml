@@ -36,6 +36,10 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
+          # Exigé par gitleaks-action dès que l'événement est une pull request :
+          # sans ce jeton le scan échoue avant même de lire le dépôt, et la CI
+          # ne peut jamais passer au vert sur une PR.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Analyse, tests et build web
