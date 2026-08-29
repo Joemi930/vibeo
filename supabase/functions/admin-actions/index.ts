@@ -524,7 +524,7 @@ Deno.serve(async (req: Request) => {
             ? await adminClient
                 .from('profiles')
                 .select('id, username, display_name, avatar_url')
-                .inFilter('id', artistIds as string[])
+                .in('id', artistIds as string[])
             : { data: [] };
 
           const usernameMap = new Map(
